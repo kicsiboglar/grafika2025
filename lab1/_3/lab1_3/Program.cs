@@ -241,11 +241,41 @@ namespace Square;
             Gl.BindVertexArray(vao);
 
             CheckGLError();
+
+            // draw lines
+            uint lineVertices = Gl.GenBuffer();
+            Gl.BindBuffer(GLEnum.ArrayBuffer, lineVertices);
+            Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)lineVertexArray.AsSpan(), GLEnum.StaticDraw);
+            Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, null);
+            Gl.EnableVertexAttribArray(0);
+            CheckGLError();
+
+            uint lineColors = Gl.GenBuffer();
+            Gl.BindBuffer(GLEnum.ArrayBuffer, lineColors);
+            Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)lineColorArray.AsSpan(), GLEnum.StaticDraw);
+            Gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 0, null);
+            Gl.EnableVertexAttribArray(1);
+            CheckGLError();
+
+            uint lineIndices = Gl.GenBuffer();
+            Gl.BindBuffer(GLEnum.ElementArrayBuffer, lineIndices);
+            Gl.BufferData(GLEnum.ElementArrayBuffer, (ReadOnlySpan<uint>)lineIndexArray.AsSpan(), GLEnum.StaticDraw);
+            CheckGLError();
+            
+            Gl.BindBuffer(GLEnum.ArrayBuffer, 0);
+            Gl.UseProgram(program);
+            Gl.DrawElements(GLEnum.Lines, (uint)lineIndexArray.Length, GLEnum.UnsignedInt, null);
+            Gl.BindBuffer(GLEnum.ElementArrayBuffer, 0);
+            Gl.BindVertexArray(vao);
+
+            CheckGLError();
             // always unbound the vertex buffer first, so no halfway results are displayed by accident
             Gl.DeleteBuffer(vertices);
             Gl.DeleteBuffer(colors);
             Gl.DeleteBuffer(indices);
             Gl.DeleteVertexArray(vao);
+
+
 
             CheckGLError();
         }
