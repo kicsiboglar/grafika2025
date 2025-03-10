@@ -1,8 +1,7 @@
 ﻿using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 
-namespace Szeminarium1
-{
+namespace Square;
     internal static class Program
     {
         private static IWindow graphicWindow;
@@ -10,6 +9,73 @@ namespace Szeminarium1
         private static GL Gl;
 
         private static uint program;
+
+
+        private static float[] vertexArray = [
+
+            0.0f, 0.0f, 0.0f,
+            0.0f, 0.65f, 0.0f,
+            -0.8f, 0.4f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            0.0f, 0.65f, 0.0f,
+            0.8f, 0.4f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            0.8f, 0.4f, 0.0f,
+            0.7f, -0.35f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            0.7f, -0.35f, 0.0f,
+            0.0f, -0.8f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            -0.8f, 0.4f, 0.0f,
+            -0.7f, -0.35f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            -0.7f, -0.35f, 0.0f,
+            0.0f, -0.8f, 0.0f,
+        ];
+
+        private static float[] colorArray = [
+            // red
+            1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.0f, 0.0f, 1.0f,
+
+            1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.0f, 0.0f, 1.0f,
+
+            // green
+            0.0f, 1.0f, 0.0f, 1.0f,
+            0.0f, 1.0f, 0.0f, 1.0f,
+            0.0f, 1.0f, 0.0f, 1.0f,
+
+            0.0f, 1.0f, 0.0f, 1.0f,
+            0.0f, 1.0f, 0.0f, 1.0f,
+            0.0f, 1.0f, 0.0f, 1.0f,
+
+            // blue
+            0.0f, 0.0f, 1.0f, 1.0f,
+            0.0f, 0.0f, 1.0f, 1.0f,
+            0.0f, 0.0f, 1.0f, 1.0f,
+
+            0.0f, 0.0f, 1.0f, 1.0f,
+            0.0f, 0.0f, 1.0f, 1.0f,
+            0.0f, 0.0f, 1.0f, 1.0f,            
+        ];
+
+
+        private static uint[] indexArray = [
+            0, 1, 2,    // top - left
+            3, 4, 5,    // top - right
+            6, 7, 8,    // right - upper
+            9, 10, 11,  // right - lower
+            12, 13, 14, // left - upper
+            15, 16, 17, // left - lower
+        ];
 
         private static readonly string VertexShaderSource = @" 
         #version 330 core
@@ -107,25 +173,6 @@ namespace Szeminarium1
             uint vao = Gl.GenVertexArray();
             Gl.BindVertexArray(vao);
 
-            //+0.5f->0.5:Cannot implicitly convert type 'double' to 'float'. An explicit conversion exists (are you missing a cast?)CS0266 
-            float[] vertexArray = new float[] {
-                -0.5f, -0.5f, 0.0f,
-                +0.5f, -0.5f, 0.0f,
-                 0.0f, +0.5f, 0.0f,
-                 1f, 1f, 0f
-            };
-
-            float[] colorArray = new float[] {
-                1.0f, 0.0f, 0.0f, 1.0f,
-                0.0f, 1.0f, 0.0f, 1.0f,
-                0.0f, 0.0f, 1.0f, 1.0f,
-                1.0f, 0.0f, 0.0f, 1.0f,
-            };
-
-            uint[] indexArray = new uint[] { 
-                0, 1, 2,
-                2, 1, 3
-            };
 
             uint vertices = Gl.GenBuffer();
             Gl.BindBuffer(GLEnum.ArrayBuffer, vertices); //nem rajzol ki semmit nelkule
@@ -175,4 +222,3 @@ namespace Szeminarium1
             }
         }
     }
-}
