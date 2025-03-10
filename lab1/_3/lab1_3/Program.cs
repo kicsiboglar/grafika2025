@@ -109,12 +109,14 @@ namespace Square;
 
             //inner lines
             -0.53f, 0.26f, 0.0f,  
-            -0.46f, -0.50f, 0.0f,  
+            -0.46f, -0.50f, 0.0f,
+
             -0.27f, 0.13f, 0.0f,  
             -0.23f, -0.65f, 0.0f,  
 
             0.53f, 0.26f, 0.0f,  
-            0.46f, -0.50f, 0.0f,  
+            0.46f, -0.50f, 0.0f,
+
             0.27f, 0.13f, 0.0f,  
             0.23f, -0.65f, 0.0f,
 
@@ -129,6 +131,19 @@ namespace Square;
 
             0.0f, -0.56f, 0.0f,
             0.725f, -0.15f, 0.0f,
+
+
+            -0.53f, 0.26f, 0.0f,
+            0.3f, 0.56f, 0.0f,
+
+            -0.27f, 0.13f, 0.0f,
+            0.58f, 0.47f, 0.0f,
+
+            0.53f, 0.26f, 0.0f,
+            -0.3f, 0.56f, 0.0f,
+
+            0.27f, 0.13f, 0.0f,
+            -0.58f, 0.47f, 0.0f,
             /*-0.53f, 0.42f, 0.0f,   
             0.53f, 0.42f, 0.0f,*/
 
@@ -195,6 +210,9 @@ namespace Square;
 
             0.0f,  0.0f,  0.0f,  0.0f,
             0.0f,  0.0f,  0.0f,  0.0f,
+
+            0.0f,  0.0f,  0.0f,  0.0f,
+            0.0f,  0.0f,  0.0f,  0.0f,
         ];
 
         private static uint[] lineIndexArray = [
@@ -218,6 +236,7 @@ namespace Square;
             34, 35,
             36, 37,
             38, 39,
+            40, 41,
             
         ];
         private static readonly string VertexShaderSource = @" 
