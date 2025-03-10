@@ -77,6 +77,25 @@ namespace Square;
             15, 16, 17, // left - lower
         ];
 
+
+        private static float[] lineVertexArray = [
+            -0.8f, 0.4f, 0.0f,
+            0.8f, 0.4f, 0.0f,
+
+            0.8f, 0.4f, 0.0f,
+            0.7f, -0.35f, 0.0f,
+
+            0.7f, -0.35f, 0.0f,
+            0.0f, -0.8f, 0.0f,
+
+            0.0f, -0.8f, 0.0f,
+            -0.7f, -0.35f, 0.0f,
+
+            -0.7f, -0.35f, 0.0f,
+            -0.8f, 0.4f, 0.0f,
+        ];
+
+    
         private static readonly string VertexShaderSource = @" 
         #version 330 core
         layout (location = 0) in vec3 vPos;
