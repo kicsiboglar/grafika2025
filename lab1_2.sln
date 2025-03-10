@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lab1", "lab1", "{ED13059D-E407-5174-3886-4FD5BEA505AB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_2", "_2", "{A15BA465-1AAF-E75E-A70C-078F5739F1E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "lab1_2", "lab1\_2\lab1_2\lab1_2.csproj", "{BFB8A6DB-65EA-4880-B711-4065976B59FB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Debug|x64.Build.0 = Debug|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Debug|x86.Build.0 = Debug|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Release|x64.ActiveCfg = Release|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Release|x64.Build.0 = Release|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Release|x86.ActiveCfg = Release|Any CPU
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A15BA465-1AAF-E75E-A70C-078F5739F1E7} = {ED13059D-E407-5174-3886-4FD5BEA505AB}
+		{BFB8A6DB-65EA-4880-B711-4065976B59FB} = {A15BA465-1AAF-E75E-A70C-078F5739F1E7}
+	EndGlobalSection
+EndGlobal
