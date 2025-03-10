@@ -79,7 +79,8 @@ namespace Square;
 
 
         private static float[] lineVertexArray = [
-            -0.8f, 0.4f, 0.0f,
+            //outlines
+            0.0f, 0.65f, 0.0f,
             0.8f, 0.4f, 0.0f,
 
             0.8f, 0.4f, 0.0f,
@@ -93,17 +94,49 @@ namespace Square;
 
             -0.7f, -0.35f, 0.0f,
             -0.8f, 0.4f, 0.0f,
+
+            -0.8f, 0.4f, 0.0f,
+            0.0f, 0.65f, 0.0f,
+
+            -0.8f, 0.4f, 0.0f,
+            0.0f, 0.0f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            0.8f, 0.4f, 0.0f,
+
+            0.0f, 0.0f, 0.0f,
+            0.0f, -0.8f, 0.0f,
+            /*-0.8f, 0.4f, 0.0f,
+            0.0f, -0.8f, 0.0f,
+
+            0.0f, -0.8f, 0.0f,
+            0.0f, 0.65f, 0.0f,*/
+
+
         ];
 
         private static float[] lineColorArray = [
             0.0f,  0.0f,  0.0f,  0.0f,
             0.0f,  0.0f,  0.0f,  0.0f,
+
             0.0f,  0.0f,  0.0f,  0.0f,
             0.0f,  0.0f,  0.0f,  0.0f, 
+
             0.0f,  0.0f,  0.0f,  0.0f,
             0.0f,  0.0f,  0.0f,  0.0f,
+
             0.0f,  0.0f,  0.0f,  0.0f,
             0.0f,  0.0f,  0.0f,  0.0f,
+
+            0.0f,  0.0f,  0.0f,  0.0f,
+            0.0f,  0.0f,  0.0f,  0.0f,
+
+            0.0f,  0.0f,  0.0f,  0.0f,
+            0.0f,  0.0f,  0.0f,  0.0f,
+
+            0.0f,  0.0f,  0.0f,  0.0f,
+            0.0f,  0.0f,  0.0f,  0.0f,
+
             0.0f,  0.0f,  0.0f,  0.0f,
             0.0f,  0.0f,  0.0f,  0.0f,
         ];
@@ -114,6 +147,10 @@ namespace Square;
             4, 5,
             6, 7,
             8, 9,
+            10, 11,
+            12, 13,
+            14, 15,
+            16, 17,
         ];
         private static readonly string VertexShaderSource = @" 
         #version 330 core
