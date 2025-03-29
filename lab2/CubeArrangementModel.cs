@@ -26,7 +26,7 @@ namespace Lab2
         /// <summary>
         /// The value by which the center cube is scaled. It varies between 0.8 and 1.2 with respect to the original size.
         /// </summary>
-        public double CenterCubeScale { get; set; } = 1;
+        public double CenterCubeScale { get; set; } = 0.95f;
 
         /// <summary>
         /// The speed of the rotation of the cube.

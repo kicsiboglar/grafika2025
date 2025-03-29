@@ -4,7 +4,7 @@ using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
 using Lab2;
 
-namespace GrafikaLab2
+namespace Lab2
 {
     internal class Program
     {
@@ -56,8 +56,6 @@ namespace GrafikaLab2
         }
         ";
 
-        
-
         private static uint program;
 
         static void Main(string[] args)
@@ -99,13 +97,6 @@ namespace GrafikaLab2
             Gl.ClearColor(System.Drawing.Color.White);
             SetupRubikCube();
             
-            Gl.Enable(EnableCap.CullFace);
-            Gl.CullFace(TriangleFace.Back);
-
-            Gl.Enable(EnableCap.DepthTest);
-            Gl.DepthFunc(DepthFunction.Lequal);
-
-
             uint vshader = Gl.CreateShader(ShaderType.VertexShader);
             uint fshader = Gl.CreateShader(ShaderType.FragmentShader);
 
@@ -117,31 +108,25 @@ namespace GrafikaLab2
 
             Gl.ShaderSource(fshader, FragmentShaderSource);
             Gl.CompileShader(fshader);
-            Gl.GetShader(fshader, ShaderParameterName.CompileStatus, out int fStatus);
-            if (fStatus != (int)GLEnum.True)
-                throw new Exception("Fragment shader failed to compile: " + Gl.GetShaderInfoLog(fshader));
 
             program = Gl.CreateProgram();
             Gl.AttachShader(program, vshader);
             Gl.AttachShader(program, fshader);
-
-
             Gl.LinkProgram(program);
-
-            Gl.DetachShader(program, vshader);
-            Gl.DetachShader(program, fshader);
-            Gl.DeleteShader(vshader);
-            Gl.DeleteShader(fshader);
-            if ((ErrorCode)Gl.GetError() != ErrorCode.NoError)
-            {
-
-            }
-
             Gl.GetProgram(program, GLEnum.LinkStatus, out var status);
             if (status == 0)
             {
                 Console.WriteLine($"Error linking shader {Gl.GetProgramInfoLog(program)}");
             }
+            Gl.DetachShader(program, vshader);
+            Gl.DetachShader(program, fshader);
+            Gl.DeleteShader(vshader);
+            Gl.DeleteShader(fshader);
+
+            Gl.Enable(EnableCap.CullFace);
+            Gl.Enable(EnableCap.DepthTest);
+            Gl.DepthFunc(DepthFunction.Lequal);
+
         }
 
         private static void Keyboard_KeyDown(IKeyboard keyboard, Key key, int arg3)
@@ -269,9 +254,7 @@ namespace GrafikaLab2
 
             if (IsSolved())
             {
-                // cubeArrangementModel.AnimationEnabled = false;
                 cubeArrangementModel.SolvingAnimationEnabled = true;
-                // Console.WriteLine("Rubik's cube is solved!!!");
             }
         }
 

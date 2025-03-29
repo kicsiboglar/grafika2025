@@ -5,11 +5,11 @@ namespace Lab2
 {
     internal class CameraDescriptor
     {
-        public double DistanceToOrigin { get; private set; } = 8;
+        public double DistanceToOrigin { get; set; } = 8;
 
-        public double AngleToZYPlane { get; private set; } = 0;
+        public double AngleToZYPlane { get; set; } = 0;
 
-        public double AngleToZXPlane { get; private set; } = 0;
+        public double AngleToZXPlane { get; set; } = 0;
 
         const double DistanceScaleFactor = 1.1;
 
@@ -44,10 +44,10 @@ namespace Lab2
         /// </summary>
         public Vector3D<float> Target
         {
-            get
+            get=> _target;
+            set
             {
-                // For the moment the camera is always pointed at the origin.
-                return Vector3D<float>.Zero;
+                _target = value;
             }
         }
 
