@@ -7,6 +7,7 @@ namespace Lab2
     {
         public uint Vao { get; }
         public uint Vertices { get; }
+        public uint Colors { get; }
         public uint Indices { get; }
         public uint IndexArrayLength { get; }
 
@@ -22,10 +23,11 @@ namespace Lab2
 
         private GL Gl;
 
-        private MyCubeModel(uint vao, uint vertices, uint indeces, uint indexArrayLength, GL gl, Coordinate<float> position)
+        private MyCubeModel(uint vao, uint vertices, uint colors, uint indeces, uint indexArrayLength, GL gl, Coordinate<float> position)
         {
             this.Vao = vao;
             this.Vertices = vertices;
+            this.Colors = colors;
             this.Indices = indeces;
             this.IndexArrayLength = indexArrayLength;
             this.Gl = gl;
@@ -33,17 +35,7 @@ namespace Lab2
             this.currentPosition = new Coordinate<float>(position);
         }
 
-        public static class Colors
-        {
-            public static float[] Red = { 1.0f, 0.0f, 0.0f, 1.0f };
-            public static float[] Green = { 0.0f, 1.0f, 0.0f, 1.0f };
-            public static float[] Blue = { 0.0f, 0.0f, 1.0f, 1.0f };
-            public static float[] Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
-            public static float[] Purple = { 1.0f, 0.0f, 1.0f, 1.0f };
-            public static float[] Orange = { 1.0f, 0.5f, 0.0f, 1.0f };
-            public static float[] Black = { 0.0f, 0.0f, 0.0f, 1.0f };
-            public static float[] White = { 1.0f, 1.0f, 1.0f, 1.0f };
-        }
+        
 
         public static unsafe MyCubeModel CreateCubeWithFaceColors(GL Gl, float[] face1Color, float[] face2Color, float[] face3Color, float[] face4Color, float[] face5Color, float[] face6Color, Coordinate<float> position)
         {
@@ -158,13 +150,14 @@ namespace Lab2
             Gl.BindBuffer(GLEnum.ArrayBuffer, 0);
             uint indexArrayLength = (uint)indexArray.Length;
 
-            return new MyCubeModel(vao, vertices, indices, indexArrayLength, Gl, position);
+            return new MyCubeModel(vao, vertices, colors, indices, indexArrayLength, Gl, position);
         }
 
         internal void ReleaseMyCubeModel()
         {
             // always unbound the vertex buffer first, so no halfway results are displayed by accident
             Gl.DeleteBuffer(Vertices);
+            Gl.DeleteBuffer(Colors);
             Gl.DeleteBuffer(Indices);
             Gl.DeleteVertexArray(Vao);
         }
