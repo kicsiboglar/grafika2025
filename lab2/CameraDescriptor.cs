@@ -1,11 +1,11 @@
 
 using Silk.NET.Maths;
 
-namespace Szeminarium
+namespace Lab2
 {
     internal class CameraDescriptor
     {
-        public double DistanceToOrigin { get; private set; } = 1;
+        public double DistanceToOrigin { get; private set; } = 3;
 
         public double AngleToZYPlane { get; private set; } = 0;
 
@@ -14,6 +14,8 @@ namespace Szeminarium
         const double DistanceScaleFactor = 1.1;
 
         const double AngleChangeStepSize = Math.PI / 180 * 5;
+
+        Vector3D<float> _target;
 
         /// <summary>
         /// Gets the position of the camera.
@@ -78,6 +80,15 @@ namespace Szeminarium
         public void DecreaseDistance()
         {
             DistanceToOrigin = DistanceToOrigin / DistanceScaleFactor;
+        }
+
+        public void MoveFocus(Vector3D<float> direction, float offset)
+        {
+            // Calculate the displacement based on the direction and offset
+            var displacement = Vector3D.Normalize(direction) * offset;
+
+            // Update the target position
+            _target += displacement;
         }
 
         private static Vector3D<float> GetPointFromAngles(double distanceToOrigin, double angleToMinZYPlane, double angleToMinZXPlane)
