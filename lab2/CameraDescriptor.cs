@@ -5,7 +5,7 @@ namespace Lab2
 {
     internal class CameraDescriptor
     {
-        public double DistanceToOrigin { get; private set; } = 3;
+        public double DistanceToOrigin { get; private set; } = 8;
 
         public double AngleToZYPlane { get; private set; } = 0;
 
