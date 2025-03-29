@@ -7,9 +7,9 @@ namespace Lab2
     {
         public double DistanceToOrigin { get; set; } = 8;
 
-        public double AngleToZYPlane { get; set; } = 0;
+        public double AngleToZYPlane { get; set; } = Math.PI / 6;
 
-        public double AngleToZXPlane { get; set; } = 0;
+        public double AngleToZXPlane { get; set; } = Math.PI / 6;
 
         const double DistanceScaleFactor = 1.1;
 

@@ -94,7 +94,7 @@ namespace Lab2
                 keyboard.KeyDown += Keyboard_KeyDown;
             }
 
-            Gl.ClearColor(System.Drawing.Color.White);
+            Gl.ClearColor(System.Drawing.Color.BlueViolet);
             SetupRubikCube();
             
             uint vshader = Gl.CreateShader(ShaderType.VertexShader);
