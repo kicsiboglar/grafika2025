@@ -2,9 +2,9 @@
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
-using Szeminarium;
+using Lab2;
 
-namespace GrafikaSzeminarium
+namespace GrafikaLab2
 {
     internal class Program
     {
@@ -52,6 +52,18 @@ namespace GrafikaSzeminarium
             FragColor = outCol;
         }
         ";
+
+        public static class Colors
+        {
+            public static float[] Red = { 1.0f, 0.0f, 0.0f, 1.0f };
+            public static float[] Green = { 0.0f, 1.0f, 0.0f, 1.0f };
+            public static float[] Blue = { 0.0f, 0.0f, 1.0f, 1.0f };
+            public static float[] Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
+            public static float[] Purple = { 1.0f, 0.0f, 1.0f, 1.0f };
+            public static float[] Orange = { 1.0f, 0.5f, 0.0f, 1.0f };
+            public static float[] Black = { 0.0f, 0.0f, 0.0f, 1.0f };
+            public static float[] White = { 1.0f, 1.0f, 1.0f, 1.0f };
+        }
 
         private static uint program;
 
