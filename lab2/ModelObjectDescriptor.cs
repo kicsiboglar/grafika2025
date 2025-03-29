@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GrafikaSzeminarium
+namespace GrafikaLab2
 {
     internal class ModelObjectDescriptor:IDisposable
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Szeminarium
+namespace Lab2
 {
     internal class CubeArrangementModel
     {
@@ -12,6 +12,11 @@ namespace Szeminarium
         /// Gets or sets wheather the animation should run or it should be frozen.
         /// </summary>
         public bool AnimationEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets whether the solving animation should run or it should be frozen.
+        /// </summary>
+        public bool SolvingAnimationEnabled { get; set; } = false;
 
         /// <summary>
         /// The time of the simulation. It helps to calculate time dependent values.
@@ -24,31 +29,68 @@ namespace Szeminarium
         public double CenterCubeScale { get; private set; } = 1;
 
         /// <summary>
-        /// The angle with which the diamond cube is rotated around the diagonal from bottom right front to top left back.
+        /// The speed of the rotation of the cube.
         /// </summary>
-        public double DiamondCubeLocalAngle { get; private set; } = 0;
+        public float RotationSpeed { get; set; } = 3f;
 
         /// <summary>
-        /// The angle with which the diamond cube is rotated around the global Y axes.
+        /// The threshold value for the rotation. If the rotation is less than this value, the cube is considered to be rotated.
         /// </summary>
-        public double DiamondCubeGlobalYAngle { get; private set; } = 0;
+        public float Threshold => RotationSpeed / 100;
 
-        internal void AdvanceTime(double deltaTime)
+        /// <summary>
+        /// The string representation of the axes.
+        /// </summary>
+        private string[] AxesStr = new string[] { "X", "Y", "Z" };
+
+        internal void AdvanceTime(double deltaTime, List<MyCubeModel> cubes)
         {
-            // we do not advance the simulation when animation is stopped
-            if (!AnimationEnabled)
-                return;
+            if (AnimationEnabled)
+            {
+                if (!RotateCubes(deltaTime, cubes))
+                {
+                    AnimationEnabled = false;
+                }
+            }
 
-            // set a simulation time
-            Time += deltaTime;
+            if (SolvingAnimationEnabled)
+            {
+                Time += deltaTime;
+                CenterCubeScale = 0.1 * Math.Sin(3 * Time) + 0.9;
+            }
+        }
 
-            // lets produce an oscillating scale in time
-            CenterCubeScale = 1 + 0.2 * Math.Sin(1.5 * Time);
+        private void HandleCubeRotation(MyCubeModel cube, double deltaTime, string axes)
+        {
+            float diff = cube.goalRotation[axes] - cube.actualRotation[axes];
+            cube.actualRotation[axes] += (float)deltaTime * RotationSpeed * Math.Sign(diff);
 
-            // the rotation angle is time x angular velocity;
-            DiamondCubeLocalAngle = Time * 10;
+            if (Math.Abs(diff) < Threshold)
+            {
+                cube.goalRotation[axes] = 0;
+                cube.actualRotation[axes] = 0;
+                cube.needsRotation[axes] = false;
+                cube.rotationHistory.Add(cube.IsPositiveRotation ? axes : "-" + axes);
+            }
+        }
 
-            DiamondCubeGlobalYAngle = -Time;
+        private bool RotateCubes(double deltaTime, List<MyCubeModel> cubes)
+        {
+
+            bool isRotating = false;
+            foreach (var cube in cubes)
+            {
+                foreach (var axes in AxesStr)
+                {
+                    if (cube.needsRotation[axes])
+                    {
+                        isRotating = true;
+                        HandleCubeRotation(cube, deltaTime, axes);
+                        break;
+                    }
+                }
+            }
+            return isRotating;
         }
     }
 }
