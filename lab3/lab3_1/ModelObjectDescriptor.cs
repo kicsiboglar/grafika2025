@@ -28,10 +28,10 @@ namespace Lab3_1
 
             // counter clockwise is front facing
             float[] vertexArray = new float[] {
-                -0.5f, -1.0f, 0f,   0f, 0f, 1f,
-                0.5f, -1.0f, 0f,   0f, 0f, 1f,  
-                -0.5f,  1.0f, 0f,   0f, 0f, 1f, 
-                0.5f,  1.0f, 0f,   0f, 0f, 1f   
+                -0.5f, 1.0f, 0.5f, 0f, 0f, 1f,
+                -0.5f, -1.0f, 0.5f, 0f, 0f, 1f,
+                0.5f, -1.0f, 0.5f, 0f, 0f, 1f,
+                0.5f, 1.0f, 0.5f, 0f, 0f, 1f 
             };
 
             float[] colorArray = new float[] {
@@ -43,7 +43,9 @@ namespace Lab3_1
 
             uint[] indexArray = new uint[] {
                 0, 1, 2,
-                1, 3, 2
+                0, 2, 3,
+                2, 1, 0,
+                3, 2, 0
             };
 
             uint vertices = Gl.GenBuffer();
@@ -56,7 +58,7 @@ namespace Lab3_1
             uint vertexSize = offsetNormals + 3 * sizeof(float);
             Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, vertexSize, (void*)offsetPos);
             Gl.EnableVertexAttribArray(0);
-            Gl.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, true, vertexSize, (void*)offsetNormals);
+            Gl.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, vertexSize, (void*)offsetNormals);
             Gl.EnableVertexAttribArray(2);
             Gl.BindBuffer(GLEnum.ArrayBuffer, 0);
 
