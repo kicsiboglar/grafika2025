@@ -7,6 +7,7 @@ using System.Dynamic;
 using System.Numerics;
 using System.Reflection;
 using lab3_2;
+using ImGuiNET;
 
 namespace lab3_2
 {
@@ -34,9 +35,20 @@ namespace lab3_2
         private const string ViewPositionVariableName = "uViewPos";
 
         private const string ShinenessVariableName = "uShininess";
+        private const string AmbientStrengthVariableName = "uAmbientStrength";
+        private const string DiffuseStrengthVariableName = "uDiffuseStrength";
+        private const string SpecularStrengthVariableName = "uSpecularStrength";
+        private static float Shininess = 50;
+        public static float AmbientStrength = 0.5f;
+        public static float DiffuseStrength = 0.5f;
+        public static float SpecularStrength = 0.5f;
 
-        private static float shininess = 50;
-
+        private static int selectedColorIndex = 0;
+        private static string[] colors = ["Red", "Green", "Blue", "Magenta", "Cyan", "Yellow"];
+        private static string sideColor = "Red";
+        public static float LightColorRed = 1f;
+        public static float LightColorGreen = 1f;
+        public static float LightColorBlue = 1f;
         private static uint program;
 
         static void Main(string[] args)
@@ -186,9 +198,12 @@ namespace lab3_2
             Gl.UseProgram(program);
 
             SetUniform3(LightColorVariableName, new Vector3(1f, 1f, 1f));
-            SetUniform3(LightPositionVariableName, new Vector3(0f, 1.2f, 0f));
+            SetUniform3(LightPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
             SetUniform3(ViewPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
-            SetUniform1(ShinenessVariableName, shininess);
+            SetUniform1(AmbientStrengthVariableName, AmbientStrength);
+            SetUniform1(DiffuseStrengthVariableName, DiffuseStrength);
+            SetUniform1(SpecularStrengthVariableName, SpecularStrength);
+            SetUniform1(ShinenessVariableName, Shininess);
 
             var viewMatrix = Matrix4X4.CreateLookAt(camera.Position, camera.Target, camera.UpVector);
             SetMatrix(viewMatrix, ViewMatrixVariableName);
@@ -201,19 +216,35 @@ namespace lab3_2
             SetModelMatrix(modelMatrixCenterCube);
             DrawModelObject(cube);
 
-            Matrix4X4<float> diamondScale = Matrix4X4.CreateScale(0.25f);
-            Matrix4X4<float> rotx = Matrix4X4.CreateRotationX((float)Math.PI / 4f);
-            Matrix4X4<float> rotz = Matrix4X4.CreateRotationZ((float)Math.PI / 4f);
-            Matrix4X4<float> roty = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeLocalAngle);
-            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(1f, 1f, 0f);
-            Matrix4X4<float> rotGlobalY = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeGlobalYAngle);
-            Matrix4X4<float> dimondCubeModelMatrix = diamondScale * rotx * rotz * roty * trans * rotGlobalY;
-            SetModelMatrix(dimondCubeModelMatrix);
-            DrawModelObject(cube);
+             ImGuiNET.ImGui.Begin("Lighting properties",
+                ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
+            ImGuiNET.ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
 
-            //ImGuiNET.ImGui.ShowDemoWindow();
-            ImGuiNET.ImGui.Begin("Lighting", ImGuiNET.ImGuiWindowFlags.AlwaysAutoResize | ImGuiNET.ImGuiWindowFlags.NoCollapse);
-            ImGuiNET.ImGui.SliderFloat("Shininess", ref shininess, 5, 100);
+            ImGuiNET.ImGui.SliderFloat("Ambient strength", ref AmbientStrength, 0, 1);
+            ImGuiNET.ImGui.SliderFloat("Diffuse strength", ref DiffuseStrength, 0, 1);
+            ImGuiNET.ImGui.SliderFloat("Specular strength", ref SpecularStrength, 0, 1);
+
+            ImGuiNET.ImGui.SliderFloat("Light color R", ref LightColorRed, 0, 1);
+            ImGuiNET.ImGui.SliderFloat("Light color G", ref LightColorGreen, 0, 1);
+            ImGuiNET.ImGui.SliderFloat("Light color B", ref LightColorBlue, 0, 1);
+
+            ImGuiNET.ImGui.Text("Select the color of the cube:");
+            if (ImGuiNET.ImGui.BeginCombo("Color", colors[selectedColorIndex]))
+            {
+                for (int n = 0; n < colors.Length; n++)
+                {
+                    bool isSelected = sideColor == colors[n];
+                    if (ImGuiNET.ImGui.Selectable(colors[n], isSelected))
+                    {
+                        sideColor = colors[n];
+                    }
+                    if (isSelected)
+                    {
+                        ImGuiNET.ImGui.SetItemDefaultFocus();
+                    }
+                }
+                ImGuiNET.ImGui.EndCombo();
+            }
             ImGuiNET.ImGui.End();
 
             imGuiController.Render();
