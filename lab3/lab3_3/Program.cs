@@ -1,9 +1,13 @@
 ﻿using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
-using Silk.NET.Windowing;
 using Silk.NET.OpenGL.Extensions.ImGui;
+using Silk.NET.Windowing;
+using System.Dynamic;
+using System.Numerics;
+using System.Reflection;
 using Lab3_3;
+using ImGuiNET;
 
 namespace Lab3_3
 {
@@ -12,34 +16,59 @@ namespace Lab3_3
         private static IWindow graphicWindow;
 
         private static GL Gl;
+        private static ImGuiController imGuiController;
 
         private static List<MyCubeModel> Cubes = new List<MyCubeModel>(new MyCubeModel[27]);
 
+        private static CameraDescriptor camera = new CameraDescriptor();
         private static Key[] rotationKeys = new Key[] { Key.Q, Key.W, Key.A, Key.S, Key.Z, Key.X, Key.U, Key.J, Key.I, Key.K, Key.O, Key.L };
 
 
-        private static CameraDescriptor camera = new CameraDescriptor();
 
         private static CubeArrangementModel cubeArrangementModel = new CubeArrangementModel();
 
         private const string ModelMatrixVariableName = "uModel";
+        private const string NormalMatrixVariableName = "uNormal";
         private const string ViewMatrixVariableName = "uView";
         private const string ProjectionMatrixVariableName = "uProjection";
+
+        private const string LightColorVariableName = "uLightColor";
+        private const string LightPositionVariableName = "uLightPos";
+        private const string ViewPositionVariableName = "uViewPos";
+
+        private const string ShinenessVariableName = "uShininess";
+        private const string AmbientStrengthVariableName = "uAmbientStrength";
+        private const string DiffuseStrengthVariableName = "uDiffuseStrength";
+        private const string SpecularStrengthVariableName = "uSpecularStrength";
+        private static float Shininess = 50;
+        public static float AmbientStrength = 0.5f;
+        public static float DiffuseStrength = 0.5f;
+        public static float SpecularStrength = 0.5f;
+
+        public static float LightColorRed = 1f;
+        public static float LightColorGreen = 1f;
+        public static float LightColorBlue = 1f;
 
         private static readonly string VertexShaderSource = @"
         #version 330 core
         layout (location = 0) in vec3 vPos;
-		layout (location = 1) in vec4 vCol;
+        layout (location = 1) in vec4 vCol;
+        layout (location = 2) in vec3 vNormal;
 
         uniform mat4 uModel;
+        uniform mat3 uNormal;
         uniform mat4 uView;
         uniform mat4 uProjection;
 
-		out vec4 outCol;
-        
+        out vec4 outCol;
+        out vec3 outNormal;
+        out vec3 outWorldPosition;
+                
         void main()
         {
-			outCol = vCol;
+            outCol = vCol;
+            outNormal = uNormal*vNormal;
+            outWorldPosition = vec3(uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0));
             gl_Position = uProjection*uView*uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0);
         }
         ";
@@ -48,12 +77,38 @@ namespace Lab3_3
         private static readonly string FragmentShaderSource = @"
         #version 330 core
         out vec4 FragColor;
-		
-		in vec4 outCol;
+
+        uniform vec3 uLightColor;
+        uniform vec3 uLightPos;
+        uniform vec3 uViewPos;
+
+        uniform float uShininess;
+
+        uniform float uAmbientStrength;
+        uniform float uDiffuseStrength;
+        uniform float uSpecularStrength;
+                
+        in vec4 outCol;
+        in vec3 outNormal;
+        in vec3 outWorldPosition;
 
         void main()
         {
-            FragColor = outCol;
+            vec3 ambient = uAmbientStrength * uLightColor;
+
+            vec3 norm = normalize(outNormal);
+            vec3 lightDir = normalize(uLightPos - outWorldPosition);
+            float diff = max(dot(norm, lightDir), 0.0);
+            vec3 diffuse = diff * uLightColor * uDiffuseStrength;
+
+            vec3 viewDir = normalize(uViewPos - outWorldPosition);
+            vec3 reflectDir = reflect(-lightDir, norm);
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), uShininess);
+            vec3 specular = uSpecularStrength * spec * uLightColor;
+
+            vec3 result = (ambient + diffuse + spec) * outCol.rgb;
+
+            FragColor = vec4(result, outCol.w);
         }
         ";
 
@@ -83,6 +138,7 @@ namespace Lab3_3
             {
                 Cube.ReleaseMyCubeModel();
             }
+            Gl.DeleteProgram(program);
         }
 
         private static void GraphicWindow_Load()
@@ -94,6 +150,15 @@ namespace Lab3_3
             {
                 keyboard.KeyDown += Keyboard_KeyDown;
             }
+             // Handle resizes
+            graphicWindow.FramebufferResize += s =>
+            {
+                // Adjust the viewport to the new window size
+                Gl.Viewport(s);
+            };
+
+
+            imGuiController = new ImGuiController(Gl, graphicWindow, inputContext);
 
             Gl.ClearColor(System.Drawing.Color.BlueViolet);
             SetupRubikCube();
@@ -162,6 +227,7 @@ namespace Lab3_3
             // NO OpenGL
             // make it threadsafe
             cubeArrangementModel.AdvanceTime(deltaTime,Cubes);
+            imGuiController.Update((float)deltaTime);
         }
 
         private static unsafe void GraphicWindow_Render(double deltaTime)
@@ -171,6 +237,14 @@ namespace Lab3_3
 
             Gl.UseProgram(program);
 
+            SetUniform3(LightColorVariableName, new Vector3(1f, 1f, 1f));
+            SetUniform3(LightPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
+            SetUniform3(ViewPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
+            SetUniform1(AmbientStrengthVariableName, AmbientStrength);
+            SetUniform1(DiffuseStrengthVariableName, DiffuseStrength);
+            SetUniform1(SpecularStrengthVariableName, SpecularStrength);
+            SetUniform1(ShinenessVariableName, Shininess);
+
             var viewMatrix = Matrix4X4.CreateLookAt(camera.Position, camera.Target, camera.UpVector);
             SetMatrix(viewMatrix, ViewMatrixVariableName);
 
@@ -178,8 +252,45 @@ namespace Lab3_3
             SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
 
             DrawModelObject();
+            ImGuiNET.ImGui.Begin("Lighting properties", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
+            ImGuiNET.ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
+
+            ImGuiNET.ImGui.SliderFloat("Ambient strength", ref AmbientStrength, 0, 1);
+            ImGuiNET.ImGui.SliderFloat("Diffuse strength", ref DiffuseStrength, 0, 1);
+            ImGuiNET.ImGui.SliderFloat("Specular strength", ref SpecularStrength, 0, 1);
+
+            ImGuiNET.ImGui.SliderFloat("Light color R", ref LightColorRed, 0, 1);
+            ImGuiNET.ImGui.SliderFloat("Light color G", ref LightColorGreen, 0, 1);
+            ImGuiNET.ImGui.SliderFloat("Light color B", ref LightColorBlue, 0, 1);
+
+            
+            ImGuiNET.ImGui.End();
+
+            imGuiController.Render();
+        }
+         private static unsafe void SetUniform1(string uniformName, float uniformValue)
+        {
+            int location = Gl.GetUniformLocation(program, uniformName);
+            if (location == -1)
+            {
+                throw new Exception($"{uniformName} uniform not found on shader.");
+            }
+
+            Gl.Uniform1(location, uniformValue);
+            CheckError();
         }
 
+        private static unsafe void SetUniform3(string uniformName, Vector3 uniformValue)
+        {
+            int location = Gl.GetUniformLocation(program, uniformName);
+            if (location == -1)
+            {
+                throw new Exception($"{uniformName} uniform not found on shader.");
+            }
+
+            Gl.Uniform3(location, uniformValue);
+            CheckError();
+        }
         private static Coordinate<float> GetRoundErrorFixedCoordinate(float x, float y, float z)
         {
             return new Coordinate<float>(GetRoundedNumber(x), GetRoundedNumber(y), GetRoundedNumber(z));
