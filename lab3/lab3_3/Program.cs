@@ -3,166 +3,168 @@ using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
 using Silk.NET.Windowing;
-using System.Dynamic;
-using System.Numerics;
-using System.Reflection;
-using Lab3_3;
 using ImGuiNET;
 
 namespace Lab3_3
 {
-    internal class Program
+    internal static class Program
     {
-        private static IWindow graphicWindow;
+        private static CameraDescriptor cameraDescriptor = new();
+
+        private static CubeArrangementModel cubeArrangementModel = new();
+
+        private static IWindow window;
 
         private static GL Gl;
-        private static ImGuiController imGuiController;
 
-        private static List<MyCubeModel> Cubes = new List<MyCubeModel>(new MyCubeModel[27]);
+        private static uint program;
 
-        private static CameraDescriptor camera = new CameraDescriptor();
-        private static Key[] rotationKeys = new Key[] { Key.Q, Key.W, Key.A, Key.S, Key.Z, Key.X, Key.U, Key.J, Key.I, Key.K, Key.O, Key.L };
+        private static ImGuiController controller;
 
+        private static List<MyCubeModel> cubes = new List<MyCubeModel>(new MyCubeModel[27]);
 
+        private static float targetRotation = 0.0f;
+        private static float currentRotation = 0.0f;
 
-        private static CubeArrangementModel cubeArrangementModel = new CubeArrangementModel();
+        private const float RotationSpeed = MathF.PI / 3.0f;
+
+        private static float Shininess = 50;
+
+        private static float AmbientStrength = 0.5f;
+
+        private static float DiffuseStrength = 0.5f;
+
+        private static float SpecularStrength = 0.5f;
+
+        private static float LightColorR = 1f;
+        private static float LightColorG = 1f;
+        private static float LightColorB = 1f;
+
+        private static float LightPosX = -4.5f;
+        private static float LightPosY = 5.0f;
+        private static float LightPosZ = 5.5f;
 
         private const string ModelMatrixVariableName = "uModel";
         private const string NormalMatrixVariableName = "uNormal";
         private const string ViewMatrixVariableName = "uView";
         private const string ProjectionMatrixVariableName = "uProjection";
-
-        private const string LightColorVariableName = "uLightColor";
-        private const string LightPositionVariableName = "uLightPos";
-        private const string ViewPositionVariableName = "uViewPos";
-
-        private const string ShinenessVariableName = "uShininess";
-        private const string AmbientStrengthVariableName = "uAmbientStrength";
-        private const string DiffuseStrengthVariableName = "uDiffuseStrength";
-        private const string SpecularStrengthVariableName = "uSpecularStrength";
-        private static float Shininess = 50;
-        public static float AmbientStrength = 0.5f;
-        public static float DiffuseStrength = 0.5f;
-        public static float SpecularStrength = 0.5f;
-
-        public static float LightColorRed = 1f;
-        public static float LightColorGreen = 1f;
-        public static float LightColorBlue = 1f;
+        private const string LightColorVariableName = "lightColor";
+        private const string LightPositionVariableName = "lightPos";
+        private const string ViewPosVariableName = "viewPos";
+        private const string ShininessVariableName = "shininess";
+        private const string AmbientStrengthVariableName = "ambientStrength";
+        private const string DiffuseStrengthVariableName = "diffuseStrength";
+        private const string SpecularStrengthVariableName = "specularStrength";
 
         private static readonly string VertexShaderSource = @"
-        #version 330 core
-        layout (location = 0) in vec3 vPos;
-        layout (location = 1) in vec4 vCol;
-        layout (location = 2) in vec3 vNormal;
+            #version 330 core
+            layout (location = 0) in vec3 vPos;
+            layout (location = 1) in vec4 vCol;
+            layout (location = 2) in vec3 vNorm;
 
-        uniform mat4 uModel;
-        uniform mat3 uNormal;
-        uniform mat4 uView;
-        uniform mat4 uProjection;
+            uniform mat4 uModel;
+            uniform mat3 uNormal;
 
-        out vec4 outCol;
-        out vec3 outNormal;
-        out vec3 outWorldPosition;
-                
-        void main()
-        {
-            outCol = vCol;
-            outNormal = uNormal*vNormal;
-            outWorldPosition = vec3(uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0));
-            gl_Position = uProjection*uView*uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0);
-        }
-        ";
+            uniform mat4 uView;
+            uniform mat4 uProjection;
 
+            out vec4 outCol;
+            out vec3 outNormal;
+            out vec3 outWorldPosition;
+            
+            void main()
+            {
+                outCol = vCol;
+                gl_Position = uProjection*uView*uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0);
+                outNormal = uNormal * vNorm;
+                outWorldPosition = vec3(uModel * vec4(vPos.x, vPos.y, vPos.z, 1.0));
+            }
+            ";
 
         private static readonly string FragmentShaderSource = @"
         #version 330 core
+        uniform vec3 lightColor;
+        uniform vec3 lightPos;
+        uniform vec3 viewPos;
+        uniform float shininess;
+        uniform float ambientStrength;
+        uniform float diffuseStrength;
+        uniform float specularStrength;
         out vec4 FragColor;
 
-        uniform vec3 uLightColor;
-        uniform vec3 uLightPos;
-        uniform vec3 uViewPos;
-
-        uniform float uShininess;
-
-        uniform float uAmbientStrength;
-        uniform float uDiffuseStrength;
-        uniform float uSpecularStrength;
-                
-        in vec4 outCol;
-        in vec3 outNormal;
+		in vec4 outCol;
         in vec3 outWorldPosition;
+        in vec3 outNormal;
 
         void main()
         {
-            vec3 ambient = uAmbientStrength * uLightColor;
-
             vec3 norm = normalize(outNormal);
-            vec3 lightDir = normalize(uLightPos - outWorldPosition);
+            vec3 ambient = ambientStrength * lightColor;
+
+            vec3 lightDir = normalize(lightPos - outWorldPosition);
             float diff = max(dot(norm, lightDir), 0.0);
-            vec3 diffuse = diff * uLightColor * uDiffuseStrength;
 
-            vec3 viewDir = normalize(uViewPos - outWorldPosition);
+            vec3 diffuse = diff * lightColor * diffuseStrength;
+            vec3 viewDir = normalize(viewPos - outWorldPosition);
             vec3 reflectDir = reflect(-lightDir, norm);
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), uShininess);
-            vec3 specular = uSpecularStrength * spec * uLightColor;
+            
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess) / max(dot(norm,viewDir), -dot(norm,lightDir));
+            vec3 specular = specularStrength * spec * lightColor;  
 
-            vec3 result = (ambient + diffuse + spec) * outCol.rgb;
-
+            vec3 result = (ambient + diffuse + specular) * outCol.xyz;
             FragColor = vec4(result, outCol.w);
         }
         ";
 
-        private static uint program;
-
         static void Main(string[] args)
         {
             WindowOptions windowOptions = WindowOptions.Default;
-            windowOptions.Title = "Lab3_3";
-            windowOptions.Size = new Silk.NET.Maths.Vector2D<int>(500, 500);
+            windowOptions.Title = "3 labor feladat - 3";
+            windowOptions.Size = new Vector2D<int>(500, 500);
 
+            // on some systems there is no depth buffer by default, so we need to make sure one is created
             windowOptions.PreferredDepthBufferBits = 24;
-            
-            graphicWindow = Window.Create(windowOptions);
 
-            graphicWindow.Load += GraphicWindow_Load;
-            graphicWindow.Update += GraphicWindow_Update;
-            graphicWindow.Render += GraphicWindow_Render;
-            graphicWindow.Closing += GraphicWindow_Closing;
+            window = Window.Create(windowOptions);
 
-            graphicWindow.Run();
+            window.Load += Window_Load;
+            window.Update += Window_Update;
+            window.Render += Window_Render;
+            window.Closing += Window_Closing;
+
+            window.Run();
         }
 
-        private static void GraphicWindow_Closing()
+        private static void Window_Load()
         {
-            foreach (var Cube in Cubes)
-            {
-                Cube.ReleaseMyCubeModel();
-            }
-            Gl.DeleteProgram(program);
-        }
-
-        private static void GraphicWindow_Load()
-        {
-            Gl = graphicWindow.CreateOpenGL();
-
-            var inputContext = graphicWindow.CreateInput();
+            IInputContext inputContext = window.CreateInput();
             foreach (var keyboard in inputContext.Keyboards)
             {
                 keyboard.KeyDown += Keyboard_KeyDown;
             }
-             // Handle resizes
-            graphicWindow.FramebufferResize += s =>
+
+            Gl = window.CreateOpenGL();
+            controller = new ImGuiController(Gl, window, inputContext);
+
+            window.FramebufferResize += s =>
             {
-                // Adjust the viewport to the new window size
                 Gl.Viewport(s);
             };
+            Gl.ClearColor(System.Drawing.Color.White);
 
-
-            imGuiController = new ImGuiController(Gl, graphicWindow, inputContext);
-
-            Gl.ClearColor(System.Drawing.Color.BlueViolet);
             SetupRubikCube();
-            
+
+            LinkProgram();
+
+            Gl.Enable(EnableCap.CullFace);
+
+            Gl.Enable(EnableCap.DepthTest);
+            Gl.DepthFunc(DepthFunction.Lequal);
+
+        }
+
+        private static void LinkProgram()
+        {
             uint vshader = Gl.CreateShader(ShaderType.VertexShader);
             uint fshader = Gl.CreateShader(ShaderType.FragmentShader);
 
@@ -188,11 +190,6 @@ namespace Lab3_3
             Gl.DetachShader(program, fshader);
             Gl.DeleteShader(vshader);
             Gl.DeleteShader(fshader);
-
-            Gl.Enable(EnableCap.CullFace);
-            Gl.Enable(EnableCap.DepthTest);
-            Gl.DepthFunc(DepthFunction.Lequal);
-
         }
 
         private static void Keyboard_KeyDown(IKeyboard keyboard, Key key, int arg3)
@@ -200,126 +197,196 @@ namespace Lab3_3
             switch (key)
             {
                 case Key.Left:
-                    camera.DecreaseZYAngle();
+                    cameraDescriptor.DecreaseZYAngle();
                     break;
+                    ;
                 case Key.Right:
-                    camera.IncreaseZYAngle();
+                    cameraDescriptor.IncreaseZYAngle();
                     break;
                 case Key.Down:
-                    camera.DecreaseZXAngle();
+                    cameraDescriptor.IncreaseDistance();
                     break;
                 case Key.Up:
-                    camera.IncreaseZXAngle();
+                    cameraDescriptor.DecreaseDistance();
                     break;
-                
-                case Key.P:
-                    camera.IncreaseDistance();
+                case Key.U:
+                    cameraDescriptor.IncreaseZXAngle();
                     break;
-                case Key.M:
-                    camera.DecreaseDistance();
+                case Key.J:
+                    cameraDescriptor.DecreaseZXAngle();
                     break;
+                case Key.Space:
+                    targetRotation += MathF.PI / 2.0f;
+                    break;
+                case Key.Backspace:
+                    targetRotation -= MathF.PI / 2.0f;
+                    break;
+
+                case Key.W:
+                    cameraDescriptor.MoveFocus(Vector3D<float>.UnitY, 0.1f);
+                    break;
+                case Key.D:
+                    cameraDescriptor.MoveFocus(Vector3D<float>.UnitX, 0.1f);
+                    break;
+                case Key.S:
+                    cameraDescriptor.MoveFocus(Vector3D<float>.UnitX * -1, 0.1f);
+                    break;
+                case Key.A:
+                    cameraDescriptor.MoveFocus(Vector3D<float>.UnitY * -1, 0.1f);
+                    break;
+
             }
-            HandleRubikCubeRotation(key);
         }
 
-        private static void GraphicWindow_Update(double deltaTime)
+        private static void Window_Update(double deltaTime)
         {
-            // NO OpenGL
-            // make it threadsafe
-            cubeArrangementModel.AdvanceTime(deltaTime,Cubes);
-            imGuiController.Update((float)deltaTime);
+
+            cubeArrangementModel.AdvanceTime(deltaTime, cubes);
+            controller.Update((float)deltaTime);
         }
 
-        private static unsafe void GraphicWindow_Render(double deltaTime)
+        private static unsafe void Window_Render(double deltaTime)
         {
+            //Console.WriteLine($"Render after {deltaTime} [s].");
+
+            // GL here
             Gl.Clear(ClearBufferMask.ColorBufferBit);
             Gl.Clear(ClearBufferMask.DepthBufferBit);
 
             Gl.UseProgram(program);
 
-            SetUniform3(LightColorVariableName, new Vector3(1f, 1f, 1f));
-            SetUniform3(LightPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
-            SetUniform3(ViewPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
-            SetUniform1(AmbientStrengthVariableName, AmbientStrength);
-            SetUniform1(DiffuseStrengthVariableName, DiffuseStrength);
-            SetUniform1(SpecularStrengthVariableName, SpecularStrength);
-            SetUniform1(ShinenessVariableName, Shininess);
+            SetViewMatrix();
+            SetProjectionMatrix();
 
-            var viewMatrix = Matrix4X4.CreateLookAt(camera.Position, camera.Target, camera.UpVector);
-            SetMatrix(viewMatrix, ViewMatrixVariableName);
+            SetLightingVariables();
 
-            var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)Math.PI / 4f, 1024f / 768f, 0.1f, 100);
-            SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
+            DrawRubikCube();
+            DrawInteractiveGui();
 
-            DrawModelObject();
-            ImGuiNET.ImGui.Begin("Lighting properties", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
-            ImGuiNET.ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
-
-            ImGuiNET.ImGui.SliderFloat("Ambient strength", ref AmbientStrength, 0, 1);
-            ImGuiNET.ImGui.SliderFloat("Diffuse strength", ref DiffuseStrength, 0, 1);
-            ImGuiNET.ImGui.SliderFloat("Specular strength", ref SpecularStrength, 0, 1);
-
-            ImGuiNET.ImGui.SliderFloat("Light color R", ref LightColorRed, 0, 1);
-            ImGuiNET.ImGui.SliderFloat("Light color G", ref LightColorGreen, 0, 1);
-            ImGuiNET.ImGui.SliderFloat("Light color B", ref LightColorBlue, 0, 1);
-
-            
-            ImGuiNET.ImGui.End();
-
-            imGuiController.Render();
+            controller.Render();
         }
-         private static unsafe void SetUniform1(string uniformName, float uniformValue)
+
+        private static unsafe void SetLightingVariables()
         {
-            int location = Gl.GetUniformLocation(program, uniformName);
+            SetUniformLocationVariables(LightColorVariableName, LightColorR, LightColorG, LightColorB);
+            SetUniformLocationVariables(LightPositionVariableName, LightPosX, LightPosY, LightPosZ);
+            SetUniformLocationVariables(ViewPosVariableName, cameraDescriptor.Position.X, cameraDescriptor.Position.Y, cameraDescriptor.Position.Z);
+
+            SetUniformLocationVariable(ShininessVariableName, Shininess);
+            SetUniformLocationVariable(AmbientStrengthVariableName, AmbientStrength);
+            SetUniformLocationVariable(DiffuseStrengthVariableName, DiffuseStrength);
+            SetUniformLocationVariable(SpecularStrengthVariableName, SpecularStrength);
+        }
+
+        private static unsafe void SetUniformLocationVariable(string variableName, float value)
+        {
+            int location = Gl.GetUniformLocation(program, variableName);
             if (location == -1)
             {
-                throw new Exception($"{uniformName} uniform not found on shader.");
+                throw new Exception($"{variableName} uniform not found on shader.");
             }
 
-            Gl.Uniform1(location, uniformValue);
+            Gl.Uniform1(location, value);
+            CheckError();
+        }
+        private static unsafe void SetUniformLocationVariables(string variableName, float value1, float value2, float value3)
+        {
+            int location = Gl.GetUniformLocation(program, variableName);
+            if (location == -1)
+            {
+                throw new Exception($"{variableName} uniform not found on shader.");
+            }
+
+            Gl.Uniform3(location, value1, value2, value3);
             CheckError();
         }
 
-        private static unsafe void SetUniform3(string uniformName, Vector3 uniformValue)
+        private static unsafe void DrawRubikCube()
         {
-            int location = Gl.GetUniformLocation(program, uniformName);
-            if (location == -1)
+            foreach (var cube in cubes)
             {
-                throw new Exception($"{uniformName} uniform not found on shader.");
+                RenderSmallCube(cube);
+            }
+        }
+
+        private static void DrawInteractiveGui()
+        {
+            ImGui.Begin("Lighting properties", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
+            ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
+            ImGui.SliderFloat("Ambient strength", ref AmbientStrength, 0, 1);
+            ImGui.SliderFloat("Diffuse strength", ref DiffuseStrength, 0, 1);
+            ImGui.SliderFloat("Specular strength", ref SpecularStrength, 0, 1);
+
+            ImGui.SliderFloat("Light color R", ref LightColorR, 0, 1);
+            ImGui.SliderFloat("Light color G", ref LightColorG, 0, 1);
+            ImGui.SliderFloat("Light color B", ref LightColorB, 0, 1);
+
+            ImGui.InputFloat("Light position X", ref LightPosX);
+            ImGui.InputFloat("Light position Y", ref LightPosY);
+            ImGui.InputFloat("Light position Z", ref LightPosZ);
+
+            ImGui.End();
+        }
+
+        private static unsafe void RenderSmallCube(MyCubeModel cube)
+        {
+
+            var scaleForMatrix = Matrix4X4.CreateScale(0.95f);
+            var translationForOneCube = Matrix4X4.CreateTranslation(cube.currentPosition.X, cube.currentPosition.Y, cube.currentPosition.Z);
+
+
+            if (cube.currentPosition.Y == 1)
+            {
+                var rotatedSide = Matrix4X4.CreateRotationY(currentRotation);
+                var modelMatrixForTopCube = scaleForMatrix * translationForOneCube * rotatedSide;
+                SetModelMatrix(modelMatrixForTopCube);
+            }
+            else
+            {
+                var modelMatrixForCenterCube = scaleForMatrix * translationForOneCube;
+                SetModelMatrix(modelMatrixForCenterCube);
             }
 
-            Gl.Uniform3(location, uniformValue);
-            CheckError();
-        }
-        private static Coordinate<float> GetRoundErrorFixedCoordinate(float x, float y, float z)
-        {
-            return new Coordinate<float>(GetRoundedNumber(x), GetRoundedNumber(y), GetRoundedNumber(z));
-        }
-
-        private static float GetRoundedNumber(float number)
-        {
-            List<float> targets = new List<float> { -1.0f, 0.0f, 1.0f };
-            float closest = targets.OrderBy(t => Math.Abs(t - number)).First();
-            return closest;
-        }
-
-        private static unsafe void RenderSmallCube(MyCubeModel Cube)
-        {
-            var scaleForMatrix = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
-            var translationMatrix = Matrix4X4.CreateTranslation(Cube.originalPosition.X, Cube.originalPosition.Y, Cube.originalPosition.Z);
-            var rotationMatrix = Cube.GetRotationMatrix();
-
-            var modelMatrix = scaleForMatrix * translationMatrix * rotationMatrix;
-
-            Coordinate<float> roundedCoordinate = GetRoundErrorFixedCoordinate(modelMatrix.M41, modelMatrix.M42, modelMatrix.M43);
-
-            Cube.currentPosition = new Coordinate<float>(roundedCoordinate);
-            
-            SetMatrix(modelMatrix, ModelMatrixVariableName);
-            
-            Gl.BindVertexArray(Cube.Vao);
-            Gl.DrawElements(GLEnum.Triangles, Cube.IndexArrayLength, GLEnum.UnsignedInt, null);
+            Gl.BindVertexArray(cube.Vao);
+            Gl.DrawElements(GLEnum.Triangles, cube.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
+        }
+
+        private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
+        {
+
+            int location = Gl.GetUniformLocation(program, ModelMatrixVariableName);
+            if (location == -1)
+            {
+                throw new Exception($"{ModelMatrixVariableName} uniform not found on shader.");
+            }
+
+            Gl.UniformMatrix4(location, 1, false, (float*)&modelMatrix);
+            CheckError();
+
+            var normalMatrixTranslation = new Matrix4X4<float>(modelMatrix.Row1, modelMatrix.Row2, modelMatrix.Row3, modelMatrix.Row4)
+            {
+                M41 = 0,
+                M42 = 0,
+                M43 = 0,
+                M44 = 1
+            };
+
+            SetInverseMatrix(normalMatrixTranslation);
+        }
+
+        private static unsafe void SetInverseMatrix(Matrix4X4<float> normalMatrixTranslation)
+        {
+            Matrix4X4<float> modelInverse;
+            Matrix4X4.Invert<float>(normalMatrixTranslation, out modelInverse);
+            Matrix3X3<float> normalMatrix = new Matrix3X3<float>(Matrix4X4.Transpose(modelInverse));
+            int location = Gl.GetUniformLocation(program, NormalMatrixVariableName);
+            if (location == -1)
+            {
+                throw new Exception($"{NormalMatrixVariableName} uniform not found on shader.");
+            }
+            Gl.UniformMatrix3(location, 1, false, (float*)&normalMatrix);
+            CheckError();
         }
 
         private static unsafe void SetupRubikCube()
@@ -331,7 +398,8 @@ namespace Lab3_3
                 {
                     for (int k = -1; k <= 1; k++)
                     {
-                        Cubes[index] = SetUpCubeObject(i, j, k);
+                        cubes[index] = SetUpCubeObject(i, j, k);
+                        cubes[index].currentPosition = new Coordinate<float>(i, j, k);
                         index++;
                     }
                 }
@@ -349,168 +417,51 @@ namespace Lab3_3
 
             if (x == 1) rightColor = Colors.Red;
             if (x == -1) leftColor = Colors.Orange;
-            if (y == 1) topColor = Colors.White;
-            if (y == -1) bottomColor = Colors.Yellow;
+            if (y == 1) topColor = Colors.Yellow;
+            if (y == -1) bottomColor = Colors.Purple;
             if (z == 1) frontColor = Colors.Green;
             if (z == -1) backColor = Colors.Blue;
 
-            return MyCubeModel.CreateCubeWithFaceColors(Gl, topColor, frontColor, leftColor, bottomColor, backColor, rightColor, new Coordinate<float>(x, y, z));
+            return MyCubeModel.CreateCubeWithFaceColors(Gl, topColor, frontColor, leftColor, bottomColor, backColor, rightColor,new Coordinate<float>(x,y,z));
+            ;
         }
 
-        private static unsafe void DrawModelObject()
-        {
-            foreach (var Cube in Cubes)
-            {
-                RenderSmallCube(Cube);
-            }
 
-            if (IsSolved())
+
+        private static void Window_Closing()
+        {
+            foreach (var cube in cubes)
             {
-                cubeArrangementModel.SolvingAnimationEnabled = true;
+                cube.ReleaseMyCubeModel();
             }
         }
 
-        private static unsafe void SetMatrix(Matrix4X4<float> mx, string uniformName)
+        private static unsafe void SetProjectionMatrix()
         {
-            int location = Gl.GetUniformLocation(program, uniformName);
+            var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)Math.PI / 4f, 1024f / 768f, 0.1f, 100);
+            int location = Gl.GetUniformLocation(program, ProjectionMatrixVariableName);
+
             if (location == -1)
             {
-                throw new Exception($"{uniformName} uniform not found on shader.");
+                throw new Exception($"{ViewMatrixVariableName} uniform not found on shader.");
             }
 
-            Gl.UniformMatrix4(location, 1, false, (float*)&mx);
+            Gl.UniformMatrix4(location, 1, false, (float*)&projectionMatrix);
             CheckError();
         }
 
-        private static bool IsSolved()
+        private static unsafe void SetViewMatrix()
         {
-            foreach (var Cube in Cubes)
+            var viewMatrix = Matrix4X4.CreateLookAt(cameraDescriptor.Position, cameraDescriptor.Target, cameraDescriptor.UpVector);
+            int location = Gl.GetUniformLocation(program, ViewMatrixVariableName);
+
+            if (location == -1)
             {
-                if (!Cube.IsInOriginalPosition())
-                {
-                    return false;
-                }
+                throw new Exception($"{ViewMatrixVariableName} uniform not found on shader.");
             }
 
-            foreach (var Cube in Cubes)
-            {
-                if (Cube.rotationHistory.Count > 0)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static async Task WaitForAnimation()
-        {
-            while (cubeArrangementModel.AnimationEnabled)
-            {
-                await Task.Delay(100);
-            }
-        }
-
-        private static async Task MixRubikCube(int numberOfMoves)
-        {
-
-            Random random = new Random();
-            for (int i = 0; i < numberOfMoves; i++)
-            {
-                int randomIndex = random.Next(0, rotationKeys.Length);
-                HandleRubikCubeRotation(rotationKeys[randomIndex]);
-                await WaitForAnimation();
-            }
-
-        }
-
-        private static void HandleSingleRotation(string axes, float targetPos, bool positiveDirection)
-        {
-            foreach (var cube in Cubes)
-            {
-                if (cube.currentPosition[axes] == targetPos)
-                {
-                    cube.goalRotation[axes] = (float)(positiveDirection ? MathF.PI / 2 : -MathF.PI / 2);
-                    cube.needsRotation[axes] = true;
-                    cube.IsPositiveRotation = positiveDirection;
-                }
-            }
-            cubeArrangementModel.AnimationEnabled = true;
-        }
-
-        private static async void HandleRubikCubeRotation(Key key)
-        {
-            if (cubeArrangementModel.AnimationEnabled
-            || (cubeArrangementModel.SolvingAnimationEnabled && key != Key.Escape))
-            {
-                return;
-            }
-            switch (key)
-            {
-                // Cube rotations around X axis
-                case Key.Q:
-                    HandleSingleRotation("X", -1f, true);
-                    break;
-                case Key.W:
-                    HandleSingleRotation("X", -1f, false);
-                    break;
-                case Key.A:
-                    HandleSingleRotation("X", 0f, true);
-                    break;
-                case Key.S:
-                    HandleSingleRotation("X", 0f, false);
-                    break;
-                case Key.Z:
-                    HandleSingleRotation("X", 1f, true);
-                    break;
-                case Key.X:
-                    HandleSingleRotation("X", 1f, false);
-                    break;
-                // Cube rotations around Y axis
-                case Key.U:
-                    HandleSingleRotation("Y", -1f, true);
-                    break;
-                case Key.J:
-                    HandleSingleRotation("Y", -1f, false);
-                    break;
-                case Key.I:
-                    HandleSingleRotation("Y", 0f, true);
-                    break;
-                case Key.K:
-                    HandleSingleRotation("Y", 0f, false);
-                    break;
-                case Key.O:
-                    HandleSingleRotation("Y", 1f, true);
-                    break;
-                case Key.L:
-                    HandleSingleRotation("Y", 1f, false);
-                    break;
-
-                // Cube mix animation
-                case Key.Space:
-                    cubeArrangementModel.RotationSpeed = 6.0f;
-                    await MixRubikCube(30);
-                    cubeArrangementModel.RotationSpeed = 3.0f;
-                    break;
-
-                // Cube reset
-                case Key.Escape:
-                    if (cubeArrangementModel.SolvingAnimationEnabled)
-                    {
-                        cubeArrangementModel.SolvingAnimationEnabled = false;
-                        cubeArrangementModel.CenterCubeScale = 0.95f;
-                    }
-                    ResetRubikCube();
-                    break;
-            }
-        }   
-
-        private static void ResetRubikCube()
-        {
-            foreach (var Cube in Cubes)
-            {
-                Cube.Reset();
-            }
+            Gl.UniformMatrix4(location, 1, false, (float*)&viewMatrix);
+            CheckError();
         }
 
         public static void CheckError()

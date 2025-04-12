@@ -5,11 +5,11 @@ namespace Lab3_3
 {
     internal class CameraDescriptor
     {
-        public double DistanceToOrigin { get; set; } = 8;
+        public double DistanceToOrigin { get; set; } = 7;
 
-        public double AngleToZYPlane { get; set; } = Math.PI / 6;
+        public double AngleToZYPlane { get; set; } = 15;
 
-        public double AngleToZXPlane { get; set; } = Math.PI / 6;
+        public double AngleToZXPlane { get; set; } =0;
 
         const double DistanceScaleFactor = 1.1;
 
