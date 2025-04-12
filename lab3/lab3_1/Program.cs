@@ -6,9 +6,9 @@ using Silk.NET.Windowing;
 using System.Dynamic;
 using System.Numerics;
 using System.Reflection;
-using Szeminarium;
+using Lab3_1;
 
-namespace GrafikaSzeminarium
+namespace Lab3_1
 {
     internal class Program
     {
@@ -42,7 +42,7 @@ namespace GrafikaSzeminarium
         static void Main(string[] args)
         {
             WindowOptions windowOptions = WindowOptions.Default;
-            windowOptions.Title = "Grafika szeminárium";
+            windowOptions.Title = " szeminárium";
             windowOptions.Size = new Silk.NET.Maths.Vector2D<int>(500, 500);
 
             graphicWindow = Window.Create(windowOptions);
@@ -82,7 +82,7 @@ namespace GrafikaSzeminarium
 
             imGuiController = new ImGuiController(Gl, graphicWindow, inputContext);
 
-            cube = ModelObjectDescriptor.CreateCube(Gl);
+            cube = ModelObjectDescriptor.CreateBoard(Gl);
 
             Gl.ClearColor(System.Drawing.Color.White);
             

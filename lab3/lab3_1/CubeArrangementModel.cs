@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Szeminarium
+namespace Lab3_1
 {
     internal class CubeArrangementModel
     {

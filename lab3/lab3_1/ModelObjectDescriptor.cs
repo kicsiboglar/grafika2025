@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GrafikaSzeminarium
+namespace Lab3_1
 {
     internal class ModelObjectDescriptor:IDisposable
     {
@@ -21,48 +21,17 @@ namespace GrafikaSzeminarium
 
         private GL Gl;
 
-        public unsafe static ModelObjectDescriptor CreateCube(GL Gl)
+        public unsafe static ModelObjectDescriptor CreateBoard(GL Gl)
         {
             uint vao = Gl.GenVertexArray();
             Gl.BindVertexArray(vao);
 
             // counter clockwise is front facing
             float[] vertexArray = new float[] {
-                // top face
-                -0.5f, 0.5f, 0.5f, 0f, 1f, 0f,
-                0.5f, 0.5f, 0.5f, 0f, 1f, 0f,
-                0.5f, 0.5f, -0.5f, 0f, 1f, 0f,
-                -0.5f, 0.5f, -0.5f, 0f, 1f, 0f, 
-
-                // front face
-                -0.5f, 0.5f, 0.5f, 0f, 0f, 1f,
-                -0.5f, -0.5f, 0.5f, 0f, 0f, 1f,
-                0.5f, -0.5f, 0.5f, 0f, 0f, 1f,
-                0.5f, 0.5f, 0.5f, 0f, 0f, 1f,
-
-                // left face
-                -0.5f, 0.5f, 0.5f, -1f, 0f, 0f,
-                -0.5f, 0.5f, -0.5f, -1f, 0f, 0f,
-                -0.5f, -0.5f, -0.5f, -1f, 0f, 0f,
-                -0.5f, -0.5f, 0.5f, -1f, 0f, 0f,
-
-                // bottom face
-                -0.5f, -0.5f, 0.5f, 0f, -1f, 0f,
-                0.5f, -0.5f, 0.5f,0f, -1f, 0f,
-                0.5f, -0.5f, -0.5f,0f, -1f, 0f,
-                -0.5f, -0.5f, -0.5f,0f, -1f, 0f,
-
-                // back face
-                0.5f, 0.5f, -0.5f, 0f, 0f, -1f,
-                -0.5f, 0.5f, -0.5f,0f, 0f, -1f,
-                -0.5f, -0.5f, -0.5f,0f, 0f, -1f,
-                0.5f, -0.5f, -0.5f,0f, 0f, -1f,
-
-                // right face
-                0.5f, 0.5f, 0.5f, 1f, 0f, 0f,
-                0.5f, 0.5f, -0.5f,1f, 0f, 0f,
-                0.5f, -0.5f, -0.5f,1f, 0f, 0f,
-                0.5f, -0.5f, 0.5f,1f, 0f, 0f,
+                -0.5f, -1.0f, 0f,   0f, 0f, 1f,
+                0.5f, -1.0f, 0f,   0f, 0f, 1f,  
+                -0.5f,  1.0f, 0f,   0f, 0f, 1f, 
+                0.5f,  1.0f, 0f,   0f, 0f, 1f   
             };
 
             float[] colorArray = new float[] {
@@ -99,22 +68,7 @@ namespace GrafikaSzeminarium
 
             uint[] indexArray = new uint[] {
                 0, 1, 2,
-                0, 2, 3,
-
-                4, 5, 6,
-                4, 6, 7,
-
-                8, 9, 10,
-                10, 11, 8,
-
-                12, 14, 13,
-                12, 15, 14,
-
-                17, 16, 19,
-                17, 19, 18,
-
-                20, 22, 21,
-                20, 23, 22
+                1, 3, 2
             };
 
             uint vertices = Gl.GenBuffer();
