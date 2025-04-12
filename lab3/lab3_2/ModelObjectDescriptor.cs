@@ -20,8 +20,9 @@ namespace lab3_2
         public uint IndexArrayLength { get; private set; }
 
         private GL Gl;
+        private static List<float> colorsList = new List<float>();
 
-        public unsafe static ModelObjectDescriptor CreateCube(GL Gl)
+        public unsafe static ModelObjectDescriptor CreateCube(GL Gl, float[] colorFace1,float[] colorFace2,float[] colorFace3,float[] colorFace4,float[] colorFace5,float[] colorFace6)
         {
             uint vao = Gl.GenVertexArray();
             Gl.BindVertexArray(vao);
@@ -65,37 +66,33 @@ namespace lab3_2
                 0.5f, -0.5f, 0.5f,1f, 0f, 0f,
             };
 
-            float[] colorArray = new float[] {
-                1.0f, 0.0f, 0.0f, 1.0f,
-                1.0f, 0.0f, 0.0f, 1.0f,
-                1.0f, 0.0f, 0.0f, 1.0f,
-                1.0f, 0.0f, 0.0f, 1.0f,
+            for (int i=0; i<4 ;++i)
+            {
+                colorsList.AddRange(colorFace1);
+            }
+            for (int i = 0; i < 4; ++i)
+            {
+                colorsList.AddRange(colorFace2);
+            }
+            for (int i = 0; i < 4; ++i)
+            {
+                colorsList.AddRange(colorFace3);
+            }
+            for (int i = 0; i < 4; ++i)
+            {
+                colorsList.AddRange(colorFace4);
+            }
+            for (int i = 0; i < 4; ++i)
+            {
+                colorsList.AddRange(colorFace5);
+            }
+            for (int i = 0; i < 4; ++i)
+            {
+                colorsList.AddRange(colorFace6);
+            }
 
-                0.0f, 1.0f, 0.0f, 1.0f,
-                0.0f, 1.0f, 0.0f, 1.0f,
-                0.0f, 1.0f, 0.0f, 1.0f,
-                0.0f, 1.0f, 0.0f, 1.0f,
-
-                0.0f, 0.0f, 1.0f, 1.0f,
-                0.0f, 0.0f, 1.0f, 1.0f,
-                0.0f, 0.0f, 1.0f, 1.0f,
-                0.0f, 0.0f, 1.0f, 1.0f,
-
-                1.0f, 0.0f, 1.0f, 1.0f,
-                1.0f, 0.0f, 1.0f, 1.0f,
-                1.0f, 0.0f, 1.0f, 1.0f,
-                1.0f, 0.0f, 1.0f, 1.0f,
-
-                0.0f, 1.0f, 1.0f, 1.0f,
-                0.0f, 1.0f, 1.0f, 1.0f,
-                0.0f, 1.0f, 1.0f, 1.0f,
-                0.0f, 1.0f, 1.0f, 1.0f,
-
-                1.0f, 1.0f, 0.0f, 1.0f,
-                1.0f, 1.0f, 0.0f, 1.0f,
-                1.0f, 1.0f, 0.0f, 1.0f,
-                1.0f, 1.0f, 0.0f, 1.0f,
-            };
+            float[] colorArray = colorsList.ToArray();
+                
 
             uint[] indexArray = new uint[] {
                 0, 1, 2,
@@ -182,6 +179,21 @@ namespace lab3_2
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+
+        public unsafe void UpdateColors(GL Gl, float[] newFaceColor)
+        {
+            int faceIndex = 1;
+            int colorIndex = faceIndex * 16;
+
+            for (int i = 0; i < 16; i++)
+            {
+                colorsList[colorIndex + i] = newFaceColor[i];
+            }
+
+            Gl.BindBuffer(GLEnum.ArrayBuffer, Colors);
+            Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)colorsList.ToArray().AsSpan(), GLEnum.StaticDraw);
+            Gl.BindBuffer(GLEnum.ArrayBuffer, 0);
         }
     }
 }

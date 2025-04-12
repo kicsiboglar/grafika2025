@@ -94,7 +94,15 @@ namespace lab3_2
 
             imGuiController = new ImGuiController(Gl, graphicWindow, inputContext);
 
-            cube = ModelObjectDescriptor.CreateCube(Gl);
+            float[] face1Color = GetColor("Red");
+            float[] face2Color = GetColor("Green");
+            float[] face3Color = GetColor("Blue");
+            float[] face4Color = GetColor("Magenta");
+            float[] face5Color = GetColor("Cyan");
+            float[] face6Color = GetColor("Yellow");
+
+
+            cube = ModelObjectDescriptor.CreateCube(Gl, face1Color, face2Color, face3Color, face4Color, face5Color, face6Color);
 
             Gl.ClearColor(System.Drawing.Color.White);
             
@@ -214,6 +222,8 @@ namespace lab3_2
 
             var modelMatrixCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
             SetModelMatrix(modelMatrixCenterCube);
+
+            UpdateFaceColor();
             DrawModelObject(cube);
 
              ImGuiNET.ImGui.Begin("Lighting properties",
@@ -320,7 +330,33 @@ namespace lab3_2
             Gl.UniformMatrix4(location, 1, false, (float*)&mx);
             CheckError();
         }
+        private static float[] GetColor(string color)
+        {
+            switch (color)
+            {
+                case "Red":
+                    return new float[] { 1.0f, 0.0f, 0.0f, 1.0f };
+                case "Green":
+                    return new float[] { 0.0f, 1.0f, 0.0f, 1.0f };
+                case "Blue":
+                    return new float[] { 0.0f, 0.0f, 1.0f, 1.0f };
+                case "Magenta":
+                    return new float[] { 1.0f, 0.0f, 1.0f, 1.0f };
+                case "Cyan":
+                    return new float[] { 0.0f, 1.0f, 1.0f, 1.0f };
+                case "Yellow":
+                    return new float[] { 1.0f, 1.0f, 0.0f, 1.0f };
+                default:
+                    return new float[] { 1.0f, 0.0f, 0.0f, 1.0f };
+            }
+        }
 
+        private static unsafe void UpdateFaceColor()
+        {
+            float[] faceColor = GetColor(sideColor);
+            faceColor = faceColor.Concat(faceColor).Concat(faceColor).Concat(faceColor).ToArray();
+            cube.UpdateColors(Gl, faceColor);
+        }
         public static void CheckError()
         {
             var error = (ErrorCode)Gl.GetError();
