@@ -2,9 +2,10 @@
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
-using Lab2;
+using Silk.NET.OpenGL.Extensions.ImGui;
+using Lab3_3;
 
-namespace Lab2
+namespace Lab3_3
 {
     internal class Program
     {
@@ -61,7 +62,7 @@ namespace Lab2
         static void Main(string[] args)
         {
             WindowOptions windowOptions = WindowOptions.Default;
-            windowOptions.Title = "Lab2";
+            windowOptions.Title = "Lab3_3";
             windowOptions.Size = new Silk.NET.Maths.Vector2D<int>(500, 500);
 
             windowOptions.PreferredDepthBufferBits = 24;

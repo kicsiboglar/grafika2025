@@ -1,7 +1,7 @@
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 
-namespace Lab2
+namespace Lab3_3
 {
     internal class MyCubeModel
     {

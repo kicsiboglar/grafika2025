@@ -1,4 +1,4 @@
-namespace Lab2
+namespace Lab3_3
 {
     public static class Colors
     {
