@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Lab3_1
 {
-    internal class CubeArrangementModel
+    internal class TubArrangementModel
     {
         
         /// <summary>

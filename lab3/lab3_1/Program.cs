@@ -18,11 +18,11 @@ namespace Lab3_1
 
         private static ImGuiController imGuiController;
 
-        private static ModelObjectDescriptor cube;
+        private static ModelObjectDescriptor tub;
 
         private static CameraDescriptor camera = new CameraDescriptor();
 
-        private static CubeArrangementModel cubeArrangementModel = new CubeArrangementModel();
+        private static TubArrangementModel tubArrangementModel = new TubArrangementModel();
 
         private const string ModelMatrixVariableName = "uModel";
         private const string NormalMatrixVariableName = "uNormal";
@@ -35,6 +35,8 @@ namespace Lab3_1
 
         private const string ShinenessVariableName = "uShininess";
 
+        private const string UsePerpendicularNormals = "uUsePrependicularNormals";
+
         private static float shininess = 50;
 
         private static uint program;
@@ -42,7 +44,7 @@ namespace Lab3_1
         static void Main(string[] args)
         {
             WindowOptions windowOptions = WindowOptions.Default;
-            windowOptions.Title = " szeminárium";
+            windowOptions.Title = "lab3_1";
             windowOptions.Size = new Silk.NET.Maths.Vector2D<int>(500, 500);
 
             graphicWindow = Window.Create(windowOptions);
@@ -57,7 +59,7 @@ namespace Lab3_1
 
         private static void GraphicWindow_Closing()
         {
-            cube.Dispose();
+            tub.Dispose();
             Gl.DeleteProgram(program);
         }
 
@@ -82,7 +84,7 @@ namespace Lab3_1
 
             imGuiController = new ImGuiController(Gl, graphicWindow, inputContext);
 
-            cube = ModelObjectDescriptor.CreateBoard(Gl);
+            tub = ModelObjectDescriptor.CreateBoard(Gl);
 
             Gl.ClearColor(System.Drawing.Color.White);
             
@@ -164,7 +166,7 @@ namespace Lab3_1
                     camera.DecreaseZXAngle();
                     break;
                 case Key.Space:
-                    cubeArrangementModel.AnimationEnabled = !cubeArrangementModel.AnimationEnabled;
+                    tubArrangementModel.AnimationEnabled = !tubArrangementModel.AnimationEnabled;
                     break;
             }
         }
@@ -173,7 +175,7 @@ namespace Lab3_1
         {
             // NO OpenGL
             // make it threadsafe
-            cubeArrangementModel.AdvanceTime(deltaTime);
+            tubArrangementModel.AdvanceTime(deltaTime);
 
             imGuiController.Update((float)deltaTime);
         }
@@ -197,9 +199,9 @@ namespace Lab3_1
             SetMatrix(projectionMatrix, ProjectionMatrixVariableName);
 
 
-            var modelMatrixCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.TubScale);
+            var modelMatrixCenterCube = Matrix4X4.CreateScale((float)tubArrangementModel.TubScale);
             SetModelMatrix(modelMatrixCenterCube);
-            DrawModelObject(cube);
+            DrawModelObject(tub);
 
             //ImGuiNET.ImGui.ShowDemoWindow();
             ImGuiNET.ImGui.Begin("Lighting", ImGuiNET.ImGuiWindowFlags.AlwaysAutoResize | ImGuiNET.ImGuiWindowFlags.NoCollapse);
@@ -235,7 +237,7 @@ namespace Lab3_1
             CheckError();
         }
 
-        private static unsafe void SetUniform1(string uniformName, float uniformValue)
+        private static unsafe void SetUniform1(string uniformName, float uniformValue) //shininess
         {
             int location = Gl.GetUniformLocation(program, uniformName);
             if (location == -1)
@@ -259,13 +261,70 @@ namespace Lab3_1
             CheckError();
         }
 
+        private static void modifyPerpendicularNormal(bool state)
+        {
+            int location = Gl.GetUniformLocation(program, UsePerpendicularNormals);
+
+            if (location == -1)
+            {
+                throw new Exception($"{UsePerpendicularNormals} not found.");
+            }
+
+            Gl.Uniform1(location, state ? 1 : 0);
+        }
         private static unsafe void DrawModelObject(ModelObjectDescriptor modelObject)
         {
-            Gl.BindVertexArray(modelObject.Vao);
-            Gl.BindBuffer(GLEnum.ElementArrayBuffer, modelObject.Indices);
-            Gl.DrawElements(PrimitiveType.Triangles, modelObject.IndexArrayLength, DrawElementsType.UnsignedInt, null);
-            Gl.BindBuffer(GLEnum.ElementArrayBuffer, 0);
-            Gl.BindVertexArray(0);
+            float radius = 2.3f;
+            float rotationAngle = MathF.PI / 9.0f;
+
+            float offsetX = 0;
+            float offsetY = 2.0f;
+            float offsetZ = radius;
+            int nrRectangles = 18;
+            modifyPerpendicularNormal(true);
+            for (int i = 0; i < nrRectangles; i++)
+            {
+                float angle = i * rotationAngle;
+                float x = offsetX + radius * (float)Math.Cos(angle);
+                float y = offsetY;
+                float z = offsetZ + radius * (float)Math.Sin(angle);
+
+                var scale = Matrix4X4.CreateScale((float)tubArrangementModel.TubScale);
+                var translation = Matrix4X4.CreateTranslation(x, y, z);
+                var rotation = Matrix4X4.CreateRotationY(angle);
+
+                var modelMatrix = scale * translation * rotation;
+                SetModelMatrix(modelMatrix);
+
+                Gl.BindVertexArray(modelObject.Vao);
+                Gl.BindBuffer(GLEnum.ElementArrayBuffer, modelObject.Indices);
+                Gl.DrawElements(PrimitiveType.Triangles, modelObject.IndexArrayLength, DrawElementsType.UnsignedInt, null);
+                Gl.BindBuffer(GLEnum.ElementArrayBuffer, 0);
+                Gl.BindVertexArray(0);
+            }
+
+            offsetY = -2.0f;
+            modifyPerpendicularNormal(false);
+            for (int i = 0; i < nrRectangles; i++)
+            {
+                float angle = i * rotationAngle;
+                float x = offsetX + radius * (float)Math.Cos(angle);
+                float y = offsetY;
+                float z = offsetZ + radius * (float)Math.Sin(angle);
+
+                var scale = Matrix4X4.CreateScale((float)tubArrangementModel.TubScale);
+                var translation = Matrix4X4.CreateTranslation(x, y, z);
+                var rotation = Matrix4X4.CreateRotationY(angle);
+
+                var modelMatrix = scale * translation * rotation;
+                SetModelMatrix(modelMatrix);
+
+                Gl.BindVertexArray(modelObject.Vao);
+                Gl.BindBuffer(GLEnum.ElementArrayBuffer, modelObject.Indices);
+                Gl.DrawElements(PrimitiveType.Triangles, modelObject.IndexArrayLength, DrawElementsType.UnsignedInt, null);
+                Gl.BindBuffer(GLEnum.ElementArrayBuffer, 0);
+                Gl.BindVertexArray(0);
+            }
         }
 
         private static unsafe void SetMatrix(Matrix4X4<float> mx, string uniformName)
