@@ -325,7 +325,7 @@ namespace Lab3_3
             ImGui.InputFloat("Light position Y", ref LightPosY);
             ImGui.InputFloat("Light position Z", ref LightPosZ);
 
-           /* ImGui.Separator();
+            ImGui.Separator();
             ImGui.Text("Forgatási vezérlők");
             
             if (ImGui.Button("X tengely bal oldal +"))
@@ -362,7 +362,7 @@ namespace Lab3_3
                 HandleSingleRotation("Y", 1f, true, deltaTime);
             ImGui.SameLine();
             if (ImGui.Button("Y tengely felső -"))
-                HandleSingleRotation("Y", 1f, false, deltaTime);*/
+                HandleSingleRotation("Y", 1f, false, deltaTime);
 
             ImGui.End();
         }
@@ -370,25 +370,46 @@ namespace Lab3_3
         private static unsafe void RenderSmallCube(MyCubeModel cube)
         {
 
-            var scaleForMatrix = Matrix4X4.CreateScale(0.95f);
-            var translationForOneCube = Matrix4X4.CreateTranslation(cube.currentPosition.X, cube.currentPosition.Y, cube.currentPosition.Z);
+            var scaleForMatrix = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
+            var translationMatrix = Matrix4X4.CreateTranslation(cube.originalPosition.X, cube.originalPosition.Y, cube.originalPosition.Z);
+            var rotationMatrix = cube.GetRotationMatrix();
 
+            var modelMatrix = scaleForMatrix * translationMatrix * rotationMatrix;
+            SetModelMatrix(modelMatrix);
 
-            if (cube.currentPosition.Y == 1)
-            {
-                var rotatedSide = Matrix4X4.CreateRotationY(currentRotation);
-                var modelMatrixForTopCube = scaleForMatrix * translationForOneCube * rotatedSide;
-                SetModelMatrix(modelMatrixForTopCube);
-            }
-            else
-            {
-                var modelMatrixForCenterCube = scaleForMatrix * translationForOneCube;
-                SetModelMatrix(modelMatrixForCenterCube);
-            }
+            Coordinate<float> roundedCoordinate = GetRoundErrorFixedCoordinate(modelMatrix.M41, modelMatrix.M42, modelMatrix.M43);
 
+            cube.currentPosition = new Coordinate<float>(roundedCoordinate);
+            
+            SetMatrix(modelMatrix, ModelMatrixVariableName);
+            
             Gl.BindVertexArray(cube.Vao);
             Gl.DrawElements(GLEnum.Triangles, cube.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
+        }
+
+        private static unsafe void SetMatrix(Matrix4X4<float> mx, string uniformName)
+        {
+            int location = Gl.GetUniformLocation(program, uniformName);
+            if (location == -1)
+            {
+                throw new Exception($"{uniformName} uniform not found on shader.");
+            }
+
+            Gl.UniformMatrix4(location, 1, false, (float*)&mx);
+            CheckError();
+        }
+
+        private static Coordinate<float> GetRoundErrorFixedCoordinate(float x, float y, float z)
+        {
+            return new Coordinate<float>(GetRoundedNumber(x), GetRoundedNumber(y), GetRoundedNumber(z));
+        }
+
+        private static float GetRoundedNumber(float number)
+        {
+            List<float> targets = new List<float> { -1.0f, 0.0f, 1.0f };
+            float closest = targets.OrderBy(t => Math.Abs(t - number)).First();
+            return closest;
         }
 
         private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
@@ -466,8 +487,6 @@ namespace Lab3_3
 
         private static void HandleSingleRotation(string axes, float targetPos, bool positiveDirection, double deltaTime)
         {
-            //output something on console
-            Console.WriteLine($"Rotating {axes} axis to {targetPos} with {(positiveDirection ? "positive" : "negative")} direction");
             foreach (var cube in cubes)
             {
                 if (cube.currentPosition[axes] == targetPos)
