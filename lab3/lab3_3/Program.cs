@@ -261,7 +261,7 @@ namespace Lab3_3
             SetLightingVariables();
 
             DrawRubikCube();
-            DrawInteractiveGui();
+            DrawInteractiveGui(deltaTime);
 
             controller.Render();
         }
@@ -309,7 +309,7 @@ namespace Lab3_3
             }
         }
 
-        private static void DrawInteractiveGui()
+        private static void DrawInteractiveGui(double deltaTime)
         {
             ImGui.Begin("Lighting properties", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
             ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
@@ -324,6 +324,45 @@ namespace Lab3_3
             ImGui.InputFloat("Light position X", ref LightPosX);
             ImGui.InputFloat("Light position Y", ref LightPosY);
             ImGui.InputFloat("Light position Z", ref LightPosZ);
+
+           /* ImGui.Separator();
+            ImGui.Text("Forgatási vezérlők");
+            
+            if (ImGui.Button("X tengely bal oldal +"))
+                HandleSingleRotation("X", -1f, true, deltaTime);
+            ImGui.SameLine();
+            if (ImGui.Button("X tengely bal oldal -"))
+                HandleSingleRotation("X", -1f, false, deltaTime);
+                
+            if (ImGui.Button("X tengely középső +"))
+                HandleSingleRotation("X", 0f, true, deltaTime);
+            ImGui.SameLine();
+            if (ImGui.Button("X tengely középső -"))
+                HandleSingleRotation("X", 0f, false, deltaTime);
+                
+            if (ImGui.Button("X tengely jobb oldal +"))
+                HandleSingleRotation("X", 1f, true, deltaTime);
+            ImGui.SameLine();
+            if (ImGui.Button("X tengely jobb oldal -"))
+                HandleSingleRotation("X", 1f, false, deltaTime);
+                
+            if (ImGui.Button("Y tengely alsó +"))
+                HandleSingleRotation("Y", -1f, true, deltaTime);
+            ImGui.SameLine();
+            if (ImGui.Button("Y tengely alsó -"))
+                HandleSingleRotation("Y", -1f, false, deltaTime);
+                
+            if (ImGui.Button("Y tengely középső +"))
+                HandleSingleRotation("Y", 0f, true, deltaTime);
+            ImGui.SameLine();
+            if (ImGui.Button("Y tengely középső -"))
+                HandleSingleRotation("Y", 0f, false, deltaTime);
+                
+            if (ImGui.Button("Y tengely felső +"))
+                HandleSingleRotation("Y", 1f, true, deltaTime);
+            ImGui.SameLine();
+            if (ImGui.Button("Y tengely felső -"))
+                HandleSingleRotation("Y", 1f, false, deltaTime);*/
 
             ImGui.End();
         }
@@ -423,10 +462,25 @@ namespace Lab3_3
             if (z == -1) backColor = Colors.Blue;
 
             return MyCubeModel.CreateCubeWithFaceColors(Gl, topColor, frontColor, leftColor, bottomColor, backColor, rightColor,new Coordinate<float>(x,y,z));
-            ;
         }
 
+        private static void HandleSingleRotation(string axes, float targetPos, bool positiveDirection, double deltaTime)
+        {
+            //output something on console
+            Console.WriteLine($"Rotating {axes} axis to {targetPos} with {(positiveDirection ? "positive" : "negative")} direction");
+            foreach (var cube in cubes)
+            {
+                if (cube.currentPosition[axes] == targetPos)
+                {
+                    cube.goalRotation[axes] = (float)(positiveDirection ? MathF.PI / 2 : -MathF.PI / 2);
+                    cube.needsRotation[axes] = true;
+                    cube.IsPositiveRotation = positiveDirection;
+                }
+            }
+            cubeArrangementModel.AnimationEnabled = true;
+            cubeArrangementModel.AdvanceTime(deltaTime,cubes);
 
+        }
 
         private static void Window_Closing()
         {
