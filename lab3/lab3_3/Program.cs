@@ -40,9 +40,9 @@ namespace Lab3_3
         private static float LightColorG = 1f;
         private static float LightColorB = 1f;
 
-        private static float LightPosX = -4.5f;
-        private static float LightPosY = 5.0f;
-        private static float LightPosZ = 5.5f;
+        private static float LightPosX = 3.0f;
+private static float LightPosY = 3.0f;
+private static float LightPosZ = 3.0f;
 
         private const string ModelMatrixVariableName = "uModel";
         private const string NormalMatrixVariableName = "uNormal";
@@ -76,44 +76,44 @@ namespace Lab3_3
             {
                 outCol = vCol;
                 gl_Position = uProjection*uView*uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0);
-                outNormal = uNormal * vNorm;
+                outNormal = normalize(uNormal * vNorm);
                 outWorldPosition = vec3(uModel * vec4(vPos.x, vPos.y, vPos.z, 1.0));
             }
             ";
 
         private static readonly string FragmentShaderSource = @"
         #version 330 core
-        uniform vec3 lightColor;
-        uniform vec3 lightPos;
-        uniform vec3 viewPos;
-        uniform float shininess;
-        uniform float ambientStrength;
-        uniform float diffuseStrength;
-        uniform float specularStrength;
-        out vec4 FragColor;
+uniform vec3 lightColor;
+uniform vec3 lightPos;
+uniform vec3 viewPos;
+uniform float shininess;
+uniform float ambientStrength;
+uniform float diffuseStrength;
+uniform float specularStrength;
+out vec4 FragColor;
 
-		in vec4 outCol;
-        in vec3 outWorldPosition;
-        in vec3 outNormal;
+in vec4 outCol;
+in vec3 outWorldPosition;
+in vec3 outNormal;
 
-        void main()
-        {
-            vec3 norm = normalize(outNormal);
-            vec3 ambient = ambientStrength * lightColor;
-
-            vec3 lightDir = normalize(lightPos - outWorldPosition);
-            float diff = max(dot(norm, lightDir), 0.0);
-
-            vec3 diffuse = diff * lightColor * diffuseStrength;
-            vec3 viewDir = normalize(viewPos - outWorldPosition);
-            vec3 reflectDir = reflect(-lightDir, norm);
-            
-            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess) / max(dot(norm,viewDir), -dot(norm,lightDir));
-            vec3 specular = specularStrength * spec * lightColor;  
-
-            vec3 result = (ambient + diffuse + specular) * outCol.xyz;
-            FragColor = vec4(result, outCol.w);
-        }
+void main()
+{
+    vec3 norm = normalize(outNormal);
+    vec3 lightDir = normalize(lightPos - outWorldPosition);
+    vec3 viewDir = normalize(viewPos - outWorldPosition);
+    
+    vec3 ambient = ambientStrength * lightColor;
+    
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diffuseStrength * diff * lightColor;
+    
+    vec3 halfwayDir = normalize(lightDir + viewDir);  
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), shininess);
+    vec3 specular = specularStrength * spec * lightColor;
+    
+    vec3 result = (ambient + diffuse + specular) * outCol.rgb;
+    FragColor = vec4(result, outCol.a);
+}
         ";
 
         static void Main(string[] args)
@@ -370,12 +370,14 @@ namespace Lab3_3
         private static unsafe void RenderSmallCube(MyCubeModel cube)
         {
 
-            var scaleForMatrix = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
-            var translationMatrix = Matrix4X4.CreateTranslation(cube.originalPosition.X, cube.originalPosition.Y, cube.originalPosition.Z);
-            var rotationMatrix = cube.GetRotationMatrix();
-
-            var modelMatrix = scaleForMatrix * translationMatrix * rotationMatrix;
-            SetModelMatrix(modelMatrix);
+    var scale = Matrix4X4.CreateScale(0.99f); 
+    var translation = Matrix4X4.CreateTranslation(cube.originalPosition.X, 
+                                                cube.originalPosition.Y, 
+                                                cube.originalPosition.Z);
+    var rotation = cube.GetRotationMatrix();
+    
+    var modelMatrix = scale * translation * rotation;
+    SetModelMatrix(modelMatrix);
 
             Coordinate<float> roundedCoordinate = GetRoundErrorFixedCoordinate(modelMatrix.M41, modelMatrix.M42, modelMatrix.M43);
 
@@ -412,27 +414,40 @@ namespace Lab3_3
             return closest;
         }
 
-        private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
+       private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
         {
+            SetMatrix(modelMatrix, ModelMatrixVariableName);
+            
+            Matrix3X3<float> upper3x3 = new Matrix3X3<float>(
+                modelMatrix.M11, modelMatrix.M12, modelMatrix.M13,
+                modelMatrix.M21, modelMatrix.M22, modelMatrix.M23,
+                modelMatrix.M31, modelMatrix.M32, modelMatrix.M33);
+            
 
-            int location = Gl.GetUniformLocation(program, ModelMatrixVariableName);
-            if (location == -1)
+            Matrix4X4<float> temp4x4 = new Matrix4X4<float>(
+                upper3x3.M11, upper3x3.M12, upper3x3.M13, 0,
+                upper3x3.M21, upper3x3.M22, upper3x3.M23, 0,
+                upper3x3.M31, upper3x3.M32, upper3x3.M33, 0,
+                0, 0, 0, 1);
+            
+            if (Matrix4X4.Invert(temp4x4, out Matrix4X4<float> inverted4x4))
             {
-                throw new Exception($"{ModelMatrixVariableName} uniform not found on shader.");
+                Matrix3X3<float> inverted3x3 = new Matrix3X3<float>(
+                    inverted4x4.M11, inverted4x4.M12, inverted4x4.M13,
+                    inverted4x4.M21, inverted4x4.M22, inverted4x4.M23,
+                    inverted4x4.M31, inverted4x4.M32, inverted4x4.M33);
+                
+                Matrix3X3<float> normalMatrix = new Matrix3X3<float>(
+                    inverted3x3.M11, inverted3x3.M21, inverted3x3.M31,
+                    inverted3x3.M12, inverted3x3.M22, inverted3x3.M32,
+                    inverted3x3.M13, inverted3x3.M23, inverted3x3.M33);
+                
+                int location = Gl.GetUniformLocation(program, NormalMatrixVariableName);
+                if (location != -1)
+                {
+                    Gl.UniformMatrix3(location, 1, false, (float*)&normalMatrix);
+                }
             }
-
-            Gl.UniformMatrix4(location, 1, false, (float*)&modelMatrix);
-            CheckError();
-
-            var normalMatrixTranslation = new Matrix4X4<float>(modelMatrix.Row1, modelMatrix.Row2, modelMatrix.Row3, modelMatrix.Row4)
-            {
-                M41 = 0,
-                M42 = 0,
-                M43 = 0,
-                M44 = 1
-            };
-
-            SetInverseMatrix(normalMatrixTranslation);
         }
 
         private static unsafe void SetInverseMatrix(Matrix4X4<float> normalMatrixTranslation)
@@ -466,24 +481,28 @@ namespace Lab3_3
             }
         }
 
-        private static unsafe MyCubeModel SetUpCubeObject(int x, int y, int z)
-        {
-            float[] topColor = Colors.Black;
-            float[] frontColor = Colors.Black;
-            float[] leftColor = Colors.Black;
-            float[] bottomColor = Colors.Black;
-            float[] backColor = Colors.Black;
-            float[] rightColor = Colors.Black;
+private static unsafe MyCubeModel SetUpCubeObject(int x, int y, int z)
+{
+    // Start with all faces black
+    float[] topColor = Colors.Black;
+    float[] frontColor = Colors.Black;
+    float[] leftColor = Colors.Black;
+    float[] bottomColor = Colors.Black;
+    float[] backColor = Colors.Black;
+    float[] rightColor = Colors.Black;
 
-            if (x == 1) rightColor = Colors.Red;
-            if (x == -1) leftColor = Colors.Orange;
-            if (y == 1) topColor = Colors.Yellow;
-            if (y == -1) bottomColor = Colors.Purple;
-            if (z == 1) frontColor = Colors.Green;
-            if (z == -1) backColor = Colors.Blue;
+    // Color all exterior faces (not just one per cube)
+    if (y == 1) topColor = Colors.Yellow;    // Top face of whole cube
+    if (y == -1) bottomColor = Colors.Purple; // Bottom face
+    if (z == 1) frontColor = Colors.Green;   // Front face
+    if (z == -1) backColor = Colors.Blue;    // Back face
+    if (x == -1) leftColor = Colors.Orange;  // Left face
+    if (x == 1) rightColor = Colors.Red;     // Right face
 
-            return MyCubeModel.CreateCubeWithFaceColors(Gl, topColor, frontColor, leftColor, bottomColor, backColor, rightColor,new Coordinate<float>(x,y,z));
-        }
+    return MyCubeModel.CreateCubeWithFaceColors(Gl, topColor, frontColor, leftColor, 
+                                              bottomColor, backColor, rightColor,
+                                              new Coordinate<float>(x,y,z));
+}
 
         private static void HandleSingleRotation(string axes, float targetPos, bool positiveDirection, double deltaTime)
         {
