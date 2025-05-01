@@ -104,7 +104,7 @@ namespace lab4_1
         static void Main(string[] args)
         {
             WindowOptions windowOptions = WindowOptions.Default;
-            windowOptions.Title = "2 szeminárium";
+            windowOptions.Title = "lab4_1";
             windowOptions.Size = new Vector2D<int>(500, 500);
 
             // on some systems there is no depth buffer by default, so we need to make sure one is created
@@ -331,7 +331,9 @@ namespace lab4_1
         {
             // set material uniform to rubber
 
-            var modelMatrixForCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
+            var scale = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
+            var translation = Matrix4X4.CreateTranslation(0f, 1f, 0f);
+            var modelMatrixForCenterCube = scale * translation;
             SetModelMatrix(modelMatrixForCenterCube);
             Gl.BindVertexArray(teapot.Vao);
             Gl.DrawElements(GLEnum.Triangles, teapot.IndexArrayLength, GLEnum.UnsignedInt, null);
