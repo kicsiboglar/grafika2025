@@ -1,6 +1,12 @@
-﻿using Silk.NET.Maths;
-using Silk.NET.OpenGL;
+﻿using System;
+using System.Collections.Generic;
+using System.Numerics;
+using System.Xml;
 using System.Globalization;
+using Silk.NET.Maths;
+using Silk.NET.OpenGL;
+using System.IO;
+
 
 namespace lab4_2
 {
@@ -13,25 +19,34 @@ namespace lab4_2
 
             List<float[]> objVertices;
             List<int[]> objFaces;
-            List<float[]> objNormals;
-            List<int[]> normalIndices;
 
-            ReadObjDataForTeapot(out objVertices, out objFaces, out objNormals, out normalIndices);
+            readColladaData("cube.dae", out objVertices, out objFaces);
+
+            List<float[]> objNormals = new List<float[]>();
+            for (int i = 0; i < objVertices.Count; ++i)
+            {
+                objNormals.Add(new float[] { 0, 0, 1 });
+            }
 
             List<float> glVertices = new List<float>();
-            List<float> glColors = new List<float>();
+            List<float> glNormals = new List<float>();
             List<uint> glIndices = new List<uint>();
 
-            CreateGlArraysFromObjArrays(faceColor, objVertices, objNormals, objFaces, normalIndices, glVertices, glColors, glIndices);
-
-            return CreateOpenGlObject(Gl, vao, glVertices, glColors, glIndices);
+            MapColladaDataToGlData(objVertices, objFaces, objNormals, out glVertices, out glNormals, out glIndices);
+            
+            return CreateOpenGlObject(Gl, vao, glVertices, glNormals, glIndices);
         }
 
-        private static unsafe GlObject CreateOpenGlObject(GL Gl, uint vao, List<float> glVertices, List<float> glColors, List<uint> glIndices)
+        private static unsafe GlObject CreateOpenGlObject(GL Gl, uint vao, List<float> glVertices, List<float> glNormals, List<uint> glIndices)
         {
             uint offsetPos = 0;
             uint offsetNormal = offsetPos + (3 * sizeof(float));
             uint vertexSize = offsetNormal + (3 * sizeof(float));
+
+            for (int i = 0; i < glVertices.Count; i++)
+            {
+                glVertices[i] *= 0.02f;
+            }
 
             uint vertices = Gl.GenBuffer();
             Gl.BindBuffer(GLEnum.ArrayBuffer, vertices);
@@ -42,11 +57,12 @@ namespace lab4_2
             Gl.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, vertexSize, (void*)offsetNormal);
             Gl.EnableVertexAttribArray(2);
 
-            uint colors = Gl.GenBuffer();
-            Gl.BindBuffer(GLEnum.ArrayBuffer, colors);
-            Gl.BufferData<float>(GLEnum.ArrayBuffer, glColors.ToArray(), GLEnum.StaticDraw);
+            uint normals = Gl.GenBuffer();
+            Gl.BindBuffer(GLEnum.ArrayBuffer, normals);
+            Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)glNormals.ToArray().AsSpan(), GLEnum.StaticDraw);
             Gl.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, 0, null);
             Gl.EnableVertexAttribArray(1);
+
 
             uint indices = Gl.GenBuffer();
             Gl.BindBuffer(GLEnum.ElementArrayBuffer, indices);
@@ -56,78 +72,79 @@ namespace lab4_2
 
             uint indexArrayLength = (uint)glIndices.Count;
 
-            return new GlObject(vao, vertices, colors, indices, indexArrayLength, Gl);
+            return new GlObject(vao, vertices, normals, indices, indexArrayLength, Gl);
         }
 
-        private static unsafe void CreateGlArraysFromObjArrays(float[] faceColor, List<float[]> objVertices, List<float[]> objNormals, List<int[]> objFaces, List<int[]> normalIndices, List<float> glVertices, List<float> glColors, List<uint> glIndices)
+        public static void readColladaData(string resourceName, out List<float[]> vertices, out List<int[]> faces)
         {
-            Dictionary<string, int> glVertexIndices = new Dictionary<string, int>();
-
-            for (int faceIdx = 0; faceIdx < objFaces.Count; ++faceIdx)
+            string fullResourceName = "lab4_2.Resources." + resourceName;
+            using (var objStream = typeof(ObjResourceReader).Assembly.GetManifestResourceStream(fullResourceName))
             {
-                int[] face = objFaces[faceIdx];
-                int[] normals = normalIndices[faceIdx];
+                XmlDocument xmlDoc = new XmlDocument();
+                xmlDoc.Load(objStream);
 
-                for (int i = 0; i < 3; ++i)
+                XmlNamespaceManager nsMgr = new XmlNamespaceManager(xmlDoc.NameTable);
+                nsMgr.AddNamespace("c", "http://www.collada.org/2005/11/COLLADASchema");
+
+
+                vertices = new List<float[]>();
+                faces = new List<int[]>();
+
+                XmlNodeList geometryNodes = xmlDoc.SelectNodes("//c:geometry/c:mesh", nsMgr);
+
+                foreach (XmlNode geometryNode in geometryNodes)
                 {
-                    float[] vertex = objVertices[face[i] - 1];
-                    float[] normal = objNormals[normals[i] - 1];
-
-                    string key = $"{vertex[0]} {vertex[1]} {vertex[2]} {normal[0]} {normal[1]} {normal[2]}";
-                    if (!glVertexIndices.ContainsKey(key))
+                    foreach (XmlNode sourceNode in geometryNode.SelectNodes("c:source", nsMgr))
                     {
-                        glVertices.AddRange(vertex);
-                        glVertices.AddRange(normal);
-                        glColors.AddRange(faceColor);
-                        glVertexIndices[key] = glVertexIndices.Count;
+                        XmlNode floatArrayNode = sourceNode.SelectSingleNode("c:float_array", nsMgr);
+
+                        float[] data = Array.ConvertAll(floatArrayNode.InnerText.Trim().Split(' '), float.Parse);
+                        XmlNode accessorNode = sourceNode.SelectSingleNode("c:technique_common/c:accessor", nsMgr);
+
+                        if (accessorNode.Attributes["stride"].Value == "3")
+                            for (int i = 0; i < data.Length; i += 3)
+                                vertices.Add(new float[] { data[i], data[i + 1], data[i + 2] });
                     }
 
-                    glIndices.Add((uint)glVertexIndices[key]);
+                    XmlNode trianglesNode = geometryNode.SelectSingleNode("c:triangles", nsMgr);
+                    string indicesText = trianglesNode.SelectSingleNode("c:p", nsMgr).InnerText;
+                    int[] indices = Array.ConvertAll(indicesText.Trim().Split(' '), int.Parse);
+
+                    for (int i = 0; i < indices.Length; i += 3)
+                        faces.Add(new int[] { indices[i], indices[i + 1], indices[i + 2] });
                 }
             }
         }
 
-        private static unsafe void ReadObjDataForTeapot(out List<float[]> objVertices, out List<int[]> objFaces, out List<float[]> objNormals, out List<int[]> normalIndices)
+        private static void MapColladaDataToGlData(List<float[]> vertices, List<int[]> faces, List<float[]> normals, out List<float> glVertexData, out List<float> glNormalData, out List<uint> glFaceData)
         {
-            objVertices = new List<float[]>();
-            objFaces = new List<int[]>();
-            objNormals = new List<float[]>();
-            normalIndices = new List<int[]>();
+            var vertexIndexMap = new Dictionary<int, uint>();
+            uint index = 0;
 
-            using (Stream objStream = typeof(ObjResourceReader).Assembly.GetManifestResourceStream("lab4_2.Resources.cube.obj"))
-            using (StreamReader objReader = new StreamReader(objStream))
+            glVertexData = new List<float>();
+            glNormalData = new List<float>();
+            glFaceData = new List<uint>();
+
+            foreach (var face in faces)
             {
-                while (!objReader.EndOfStream)
+                for (int i = 0; i < face.Length; i++)
                 {
-                    string line = objReader.ReadLine()?.Trim();
-                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#")) continue;
-
-                    string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    switch (parts[0])
+                    if (!vertexIndexMap.ContainsKey(face[i]))
                     {
-                        case "v":
-                            objVertices.Add(parts.Skip(1).Take(3).Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray());
-                            break;
-                        case "vn":
-                            objNormals.Add(parts.Skip(1).Take(3).Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray());
-                            break;
-                        case "f":
-                            int[] vertexIndices = new int[3];
-                            int[] normalIdx = new int[3];
+                        var vertex = vertices[face[i]];
+                        var normal = normals.Count > face[i] ? normals[face[i]] : new float[] { 0, 0, 1 };
 
-                            for (int i = 0; i < 3; ++i)
-                            {
-                                string[] indices = parts[i + 1].Split("//", StringSplitOptions.RemoveEmptyEntries);
-                                vertexIndices[i] = int.Parse(indices[0], CultureInfo.InvariantCulture);
-                                normalIdx[i] = int.Parse(indices[1], CultureInfo.InvariantCulture);
-                            }
+                        glVertexData.AddRange(vertex);
+                        glVertexData.AddRange(normal);
 
-                            objFaces.Add(vertexIndices);
-                            normalIndices.Add(normalIdx);
-                            break;
+                        glNormalData.AddRange(normal);
+
+                        vertexIndexMap[face[i]] = index++;
                     }
+
+                    glFaceData.Add(vertexIndexMap[face[i]]);
                 }
             }
-        }
+        } 
     }
 }

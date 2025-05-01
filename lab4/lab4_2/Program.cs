@@ -332,7 +332,7 @@ namespace lab4_2
             // set material uniform to rubber
 
             var scale = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
-            var translation = Matrix4X4.CreateTranslation(0f, 1f, 0f);
+            var translation = Matrix4X4.CreateTranslation(0f, 3f, 0f);
             var modelMatrixForCenterCube = scale * translation;
             SetModelMatrix(modelMatrixForCenterCube);
             Gl.BindVertexArray(teapot.Vao);
