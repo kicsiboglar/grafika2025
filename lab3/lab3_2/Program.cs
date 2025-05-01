@@ -205,7 +205,7 @@ namespace lab3_2
 
             Gl.UseProgram(program);
 
-            SetUniform3(LightColorVariableName, new Vector3(1f, 1f, 1f));
+            SetUniform3(LightColorVariableName, new Vector3(LightColorRed,LightColorGreen,LightColorBlue));
             SetUniform3(LightPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
             SetUniform3(ViewPositionVariableName, new Vector3(camera.Position.X, camera.Position.Y, camera.Position.Z));
             SetUniform1(AmbientStrengthVariableName, AmbientStrength);
