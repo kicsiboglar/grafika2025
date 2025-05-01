@@ -1,19 +1,18 @@
-﻿
-using Silk.NET.Maths;
+﻿using Silk.NET.Maths;
 
 namespace lab4_1
 {
     internal class CameraDescriptor
     {
-        public double DistanceToOrigin { get; private set; } = 1;
+        private double DistanceToOrigin = 4;
 
-        public double AngleToZYPlane { get; private set; } = 0;
+        private double AngleToZYPlane = 0;
 
-        public double AngleToZXPlane { get; private set; } = 0;
+        private double AngleToZXPlane = 0;
 
-        const double DistanceScaleFactor = 1.1;
+        private const double DistanceScaleFactor = 1.1;
 
-        const double AngleChangeStepSize = Math.PI / 180 * 5;
+        private const double AngleChangeStepSize = Math.PI / 180 * 5;
 
         /// <summary>
         /// Gets the position of the camera.

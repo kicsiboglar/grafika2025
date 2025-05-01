@@ -1,4 +1,5 @@
-﻿using Silk.NET.Input;
+﻿using ImGuiNET;
+using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.OpenGL.Extensions.ImGui;
@@ -6,24 +7,29 @@ using Silk.NET.Windowing;
 
 namespace lab4_1
 {
-    internal class Program
+    internal static class Program
     {
         private static CameraDescriptor cameraDescriptor = new();
 
         private static CubeArrangementModel cubeArrangementModel = new();
 
-        private static IWindow graphicWindow;
-        private static ImGuiController imGuiController;
+        private static IWindow window;
+
+        private static IInputContext inputContext;
 
         private static GL Gl;
 
+        private static ImGuiController controller;
+
         private static uint program;
 
-        private static GlObject glCube;
+        private static GlObject teapot;
 
-        private static GlObject glTeapot;
+        private static GlObject table;
 
-        private static float Shininess = 40;
+        private static GlCube glCubeRotating;
+
+        private static float Shininess = 50;
 
         private const string ModelMatrixVariableName = "uModel";
         private const string NormalMatrixVariableName = "uNormal";
@@ -34,7 +40,7 @@ namespace lab4_1
         #version 330 core
         layout (location = 0) in vec3 vPos;
 		layout (location = 1) in vec4 vCol;
-        layout (location = 2) in vec3 vNormal;
+        layout (location = 2) in vec3 vNorm;
 
         uniform mat4 uModel;
         uniform mat3 uNormal;
@@ -48,9 +54,9 @@ namespace lab4_1
         void main()
         {
 			outCol = vCol;
-            outNormal = uNormal*vNormal;
-            outWorldPosition = vec3(uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0));
             gl_Position = uProjection*uView*uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0);
+            outNormal = uNormal*vNorm;
+            outWorldPosition = vec3(uModel*vec4(vPos.x, vPos.y, vPos.z, 1.0));
         }
         ";
 
@@ -61,21 +67,21 @@ namespace lab4_1
 
         private static readonly string FragmentShaderSource = @"
         #version 330 core
-        out vec4 FragColor;
-
+        
         uniform vec3 lightColor;
         uniform vec3 lightPos;
         uniform vec3 viewPos;
-
         uniform float shininess;
-		
+
+        out vec4 FragColor;
+
 		in vec4 outCol;
         in vec3 outNormal;
         in vec3 outWorldPosition;
 
         void main()
         {
-            float ambientStrength = 0.1;
+            float ambientStrength = 0.2;
             vec3 ambient = ambientStrength * lightColor;
 
             float diffuseStrength = 0.3;
@@ -83,16 +89,14 @@ namespace lab4_1
             vec3 lightDir = normalize(lightPos - outWorldPosition);
             float diff = max(dot(norm, lightDir), 0.0);
             vec3 diffuse = diff * lightColor * diffuseStrength;
-            
-            float specularStrength = 0.6;
+
+            float specularStrength = 0.5;
             vec3 viewDir = normalize(viewPos - outWorldPosition);
             vec3 reflectDir = reflect(-lightDir, norm);
-            
-            float spec = sign(max(dot(norm, lightDir),0)) * pow( max(dot(viewDir, reflectDir), 0.0), shininess) / max(max(dot(norm,viewDir), 0), max(dot(norm,lightDir), 0));
+            float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess) / max(dot(norm,viewDir), -dot(norm,lightDir));
             vec3 specular = specularStrength * spec * lightColor;  
-            
-            vec3 result = (ambient + diffuse + specular) * outCol.rgb;
 
+            vec3 result = (ambient + diffuse + specular) * outCol.xyz;
             FragColor = vec4(result, outCol.w);
         }
         ";
@@ -100,44 +104,55 @@ namespace lab4_1
         static void Main(string[] args)
         {
             WindowOptions windowOptions = WindowOptions.Default;
-            windowOptions.Title = "lab4_1";
+            windowOptions.Title = "2 szeminárium";
             windowOptions.Size = new Vector2D<int>(500, 500);
 
-            graphicWindow = Window.Create(windowOptions);
-            graphicWindow.FramebufferResize += newSize => { Gl.Viewport(newSize); };
+            // on some systems there is no depth buffer by default, so we need to make sure one is created
+            windowOptions.PreferredDepthBufferBits = 24;
 
-            graphicWindow.Load += GraphicWindow_Load;
-            graphicWindow.Update += GraphicWindow_Update;
-            graphicWindow.Render += GraphicWindow_Render;
-            graphicWindow.Closing += GraphicWindow_Closing;
+            window = Window.Create(windowOptions);
 
-            graphicWindow.Run();
+            window.Load += Window_Load;
+            window.Update += Window_Update;
+            window.Render += Window_Render;
+            window.Closing += Window_Closing;
+
+            window.Run();
         }
 
-        private static void GraphicWindow_Load()
+        private static void Window_Load()
         {
-            Gl = graphicWindow.CreateOpenGL();
+            //Console.WriteLine("Load");
 
-            var inputContext = graphicWindow.CreateInput();
+            // set up input handling
+            inputContext = window.CreateInput();
             foreach (var keyboard in inputContext.Keyboards)
             {
                 keyboard.KeyDown += Keyboard_KeyDown;
             }
 
-            imGuiController = new ImGuiController(Gl, graphicWindow, inputContext);
+            Gl = window.CreateOpenGL();
 
-            Gl.ClearColor(System.Drawing.Color.White);
+            controller = new ImGuiController(Gl, window, inputContext);
+
+            // Handle resizes
+            window.FramebufferResize += s =>
+            {
+                // Adjust the viewport to the new window size
+                Gl.Viewport(s);
+            };
+
+
+            Gl.ClearColor(System.Drawing.Color.Black);
+
+            SetUpObjects();
+
+            LinkProgram();
 
             //Gl.Enable(EnableCap.CullFace);
 
             Gl.Enable(EnableCap.DepthTest);
             Gl.DepthFunc(DepthFunction.Lequal);
-
-            glCube = GlObject.CreateCube(Gl);
-
-            glTeapot = ObjectResourceReader.CreateObjectFromResource(Gl, "teapot.obj");
-
-            LinkProgram();
         }
 
         private static void LinkProgram()
@@ -163,15 +178,10 @@ namespace lab4_1
             {
                 Console.WriteLine($"Error linking shader {Gl.GetProgramInfoLog(program)}");
             }
-
             Gl.DetachShader(program, vshader);
             Gl.DetachShader(program, fshader);
             Gl.DeleteShader(vshader);
             Gl.DeleteShader(fshader);
-            if ((ErrorCode)Gl.GetError() != ErrorCode.NoError)
-            {
-
-            }
         }
 
         private static void Keyboard_KeyDown(IKeyboard keyboard, Key key, int arg3)
@@ -198,56 +208,95 @@ namespace lab4_1
                     cameraDescriptor.DecreaseZXAngle();
                     break;
                 case Key.Space:
-                    cubeArrangementModel.AnimationEnabled = !cubeArrangementModel.AnimationEnabled;
+                    cubeArrangementModel.AnimationEnabeld = !cubeArrangementModel.AnimationEnabeld;
                     break;
             }
         }
 
-        private static void GraphicWindow_Update(double deltaTime)
+        private static void Window_Update(double deltaTime)
         {
-            // no GL
-            // not threadsafe
+            //Console.WriteLine($"Update after {deltaTime} [s].");
+            // multithreaded
+            // make sure it is threadsafe
+            // NO GL calls
             cubeArrangementModel.AdvanceTime(deltaTime);
 
-            imGuiController.Update((float)deltaTime);
+            controller.Update((float)deltaTime);
         }
 
-        private static unsafe void GraphicWindow_Render(double deltaTime)
+        private static unsafe void Window_Render(double deltaTime)
         {
-            // GL
+            //Console.WriteLine($"Render after {deltaTime} [s].");
+
+            // GL here
             Gl.Clear(ClearBufferMask.ColorBufferBit);
             Gl.Clear(ClearBufferMask.DepthBufferBit);
+
 
             Gl.UseProgram(program);
 
             SetViewMatrix();
             SetProjectionMatrix();
 
-            SetLight();
-
-            int location = Gl.GetUniformLocation(program, ViewPosVariableName);
-            if (location == -1)
-            {
-                throw new Exception($"{ViewPosVariableName} uniform not found on shader.");
-            }
-            Gl.Uniform3(location, cameraDescriptor.Position.X, cameraDescriptor.Position.Y, cameraDescriptor.Position.Z);
-            CheckError();
-
+            SetLightColor();
+            SetLightPosition();
+            SetViewerPosition();
             SetShininess();
-            
-            DrawCenteredPulsingTeapot();
+
+            DrawPulsingTeapot();
 
             DrawRevolvingCube();
 
             //ImGuiNET.ImGui.ShowDemoWindow();
-            ImGuiNET.ImGui.Begin("Lighting", ImGuiNET.ImGuiWindowFlags.NoCollapse | ImGuiNET.ImGuiWindowFlags.NoTitleBar | ImGuiNET.ImGuiWindowFlags.AlwaysAutoResize);
+            ImGuiNET.ImGui.Begin("Lighting properties",
+                ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
             ImGuiNET.ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
             ImGuiNET.ImGui.End();
 
-            imGuiController.Render();
+
+            controller.Render();
         }
 
-        private static void SetShininess()
+        private static unsafe void SetLightColor()
+        {
+            int location = Gl.GetUniformLocation(program, LightColorVariableName);
+
+            if (location == -1)
+            {
+                throw new Exception($"{LightColorVariableName} uniform not found on shader.");
+            }
+
+            Gl.Uniform3(location, 1f, 1f, 1f);
+            CheckError();
+        }
+
+        private static unsafe void SetLightPosition()
+        {
+            int location = Gl.GetUniformLocation(program, LightPositionVariableName);
+
+            if (location == -1)
+            {
+                throw new Exception($"{LightPositionVariableName} uniform not found on shader.");
+            }
+
+            Gl.Uniform3(location, 0f, 10f, 0f);
+            CheckError();
+        }
+
+        private static unsafe void SetViewerPosition()
+        {
+            int location = Gl.GetUniformLocation(program, ViewPosVariableName);
+
+            if (location == -1)
+            {
+                throw new Exception($"{ViewPosVariableName} uniform not found on shader.");
+            }
+
+            Gl.Uniform3(location, cameraDescriptor.Position.X, cameraDescriptor.Position.Y, cameraDescriptor.Position.Z);
+            CheckError();
+        }
+
+        private static unsafe void SetShininess()
         {
             int location = Gl.GetUniformLocation(program, ShininessVariableName);
 
@@ -256,54 +305,42 @@ namespace lab4_1
                 throw new Exception($"{ShininessVariableName} uniform not found on shader.");
             }
 
-            // full white light
             Gl.Uniform1(location, Shininess);
             CheckError();
         }
 
         private static unsafe void DrawRevolvingCube()
         {
-            Gl.BindVertexArray(glCube.Vao);
+            // set material uniform to metal
 
-            Matrix4X4<float> diamondScale = Matrix4X4.CreateScale(0.25f);
+            Matrix4X4<float> diamondScale = Matrix4X4.CreateScale(1f);
             Matrix4X4<float> rotx = Matrix4X4.CreateRotationX((float)Math.PI / 4f);
             Matrix4X4<float> rotz = Matrix4X4.CreateRotationZ((float)Math.PI / 4f);
-            Matrix4X4<float> roty = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeLocalAngle);
-            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(1f, 1f, 0f);
-            Matrix4X4<float> rotGlobalY = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeGlobalYAngle);
-            Matrix4X4<float> modelMatrix = diamondScale * rotx * rotz * roty * trans * rotGlobalY;
+            Matrix4X4<float> rotLocY = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeAngleOwnRevolution);
+            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(4f, 4f, 0f);
+            Matrix4X4<float> rotGlobY = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeAngleRevolutionOnGlobalY);
+            Matrix4X4<float> modelMatrix = diamondScale * rotx * rotz * rotLocY * trans * rotGlobY;
 
             SetModelMatrix(modelMatrix);
-            Gl.DrawElements(PrimitiveType.Triangles, glCube.IndexArrayLength, DrawElementsType.UnsignedInt, null);
+            Gl.BindVertexArray(glCubeRotating.Vao);
+            Gl.DrawElements(GLEnum.Triangles, glCubeRotating.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
         }
 
-        private static void SetLight()
+        private static unsafe void DrawPulsingTeapot()
         {
-            int location = Gl.GetUniformLocation(program, LightColorVariableName);
-            if (location == -1)
-            {
-                throw new Exception($"{LightColorVariableName} uniform not found on shader.");
-            }
-            // full white light
-            Gl.Uniform3(location, 1f, 1f, 1f);
-            CheckError();
+            // set material uniform to rubber
 
-            location = Gl.GetUniformLocation(program, LightPositionVariableName);
-            if (location == -1)
-            {
-                throw new Exception($"{LightPositionVariableName} uniform not found on shader.");
-            }
-            Gl.Uniform3(location, 0f, 1.5f, 0f);
-            CheckError();
-        }
-
-        private static unsafe void DrawCenteredPulsingTeapot()
-        {
-            Gl.BindVertexArray(glTeapot.Vao);
-            Matrix4X4<float> modelMatrixForCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
+            var modelMatrixForCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
             SetModelMatrix(modelMatrixForCenterCube);
-            Gl.DrawElements(PrimitiveType.Triangles, glTeapot.IndexArrayLength, DrawElementsType.UnsignedInt, null);
+            Gl.BindVertexArray(teapot.Vao);
+            Gl.DrawElements(GLEnum.Triangles, teapot.IndexArrayLength, GLEnum.UnsignedInt, null);
+            Gl.BindVertexArray(0);
+
+            var modelMatrixForTable = Matrix4X4.CreateScale(1f, 1f, 1f);
+            SetModelMatrix(modelMatrixForTable);
+            Gl.BindVertexArray(table.Vao);
+            Gl.DrawElements(GLEnum.Triangles, table.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
         }
 
@@ -314,10 +351,10 @@ namespace lab4_1
             {
                 throw new Exception($"{ModelMatrixVariableName} uniform not found on shader.");
             }
+
             Gl.UniformMatrix4(location, 1, false, (float*)&modelMatrix);
             CheckError();
 
-            // G = (M^-1)^T
             var modelMatrixWithoutTranslation = new Matrix4X4<float>(modelMatrix.Row1, modelMatrix.Row2, modelMatrix.Row3, modelMatrix.Row4);
             modelMatrixWithoutTranslation.M41 = 0;
             modelMatrixWithoutTranslation.M42 = 0;
@@ -336,19 +373,43 @@ namespace lab4_1
             CheckError();
         }
 
-        private static void GraphicWindow_Closing()
+        private static unsafe void SetUpObjects()
         {
-            glCube.Release();
+
+            float[] face1Color = [1f, 0f, 0f, 1.0f];
+            float[] face2Color = [0.0f, 1.0f, 0.0f, 1.0f];
+            float[] face3Color = [0.0f, 0.0f, 1.0f, 1.0f];
+            float[] face4Color = [1.0f, 0.0f, 1.0f, 1.0f];
+            float[] face5Color = [0.0f, 1.0f, 1.0f, 1.0f];
+            float[] face6Color = [1.0f, 1.0f, 0.0f, 1.0f];
+
+            teapot = ObjResourceReader.CreateTeapotWithColor(Gl, face1Color);
+
+            float[] tableColor = [System.Drawing.Color.Azure.R/256f,
+                                  System.Drawing.Color.Azure.G/256f,
+                                  System.Drawing.Color.Azure.B/256f,
+                                  1f];
+            table = GlCube.CreateSquare(Gl, tableColor);
+
+            glCubeRotating = GlCube.CreateCubeWithFaceColors(Gl, face1Color, face2Color, face3Color, face4Color, face5Color, face6Color);
+        }
+
+        
+
+        private static void Window_Closing()
+        {
+            teapot.ReleaseGlObject();
+            glCubeRotating.ReleaseGlObject();
         }
 
         private static unsafe void SetProjectionMatrix()
         {
-            var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)(Math.PI / 2), 1024f / 768f, 0.1f, 100);
+            var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)Math.PI / 4f, 1024f / 768f, 0.1f, 100);
             int location = Gl.GetUniformLocation(program, ProjectionMatrixVariableName);
 
             if (location == -1)
             {
-                throw new Exception($"{ProjectionMatrixVariableName} uniform not found on shader.");
+                throw new Exception($"{ViewMatrixVariableName} uniform not found on shader.");
             }
 
             Gl.UniformMatrix4(location, 1, false, (float*)&projectionMatrix);

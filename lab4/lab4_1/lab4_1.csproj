@@ -10,10 +10,12 @@
 
   <ItemGroup>
     <None Remove="Resources\teapot.obj" />
+    <None Remove="Resources\cube.obj" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\teapot.obj" />
+    <EmbeddedResource Include="Resources\cube.obj" />
   </ItemGroup>
 
   <ItemGroup>
