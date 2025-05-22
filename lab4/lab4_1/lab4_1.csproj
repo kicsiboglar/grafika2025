@@ -11,11 +11,13 @@
   <ItemGroup>
     <None Remove="Resources\teapot.obj" />
     <None Remove="Resources\cube.obj" />
+    <None Remove="Resources\minicooper_filtered.obj" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\teapot.obj" />
     <EmbeddedResource Include="Resources\cube.obj" />
+    <EmbeddedResource Include="Resources\minicooper_filtered.obj" />
   </ItemGroup>
 
   <ItemGroup>

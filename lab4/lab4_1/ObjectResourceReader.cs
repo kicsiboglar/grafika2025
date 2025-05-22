@@ -94,7 +94,7 @@ namespace lab4_1
             objNormals = new List<float[]>();
             normalIndices = new List<int[]>();
 
-            using (Stream objStream = typeof(ObjResourceReader).Assembly.GetManifestResourceStream("lab4_1.Resources.cube.obj"))
+            using (Stream objStream = typeof(ObjResourceReader).Assembly.GetManifestResourceStream("lab4_1.Resources.minicooper_filtered.obj"))
             using (StreamReader objReader = new StreamReader(objStream))
             {
                 while (!objReader.EndOfStream)
@@ -117,7 +117,11 @@ namespace lab4_1
 
                             for (int i = 0; i < 3; ++i)
                             {
-                                string[] indices = parts[i + 1].Split("//", StringSplitOptions.RemoveEmptyEntries);
+                                string[] indices = parts[i + 1].Split("/", StringSplitOptions.RemoveEmptyEntries);
+                                if (indices.Length != 2 )
+                                {
+                                    indices[1]=indices[2];
+                                }
                                 vertexIndices[i] = int.Parse(indices[0], CultureInfo.InvariantCulture);
                                 normalIdx[i] = int.Parse(indices[1], CultureInfo.InvariantCulture);
                             }
