@@ -29,3 +29,8 @@ bin/
 .DS_Store
 
 .idea/
+*.jar
+*.jnilib
+*.xml
+*.dylib
+*.iml
